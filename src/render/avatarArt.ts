@@ -18,6 +18,8 @@ export interface AvatarPose {
   arms: 'down' | 'up' | 'drink' | 'headphones';
   /** Optional hand-held headphones look for the DJ (drawn over the head). */
   headphones?: boolean;
+  /** Dark sunglasses (bouncers). */
+  shades?: boolean;
 }
 
 const OUTLINE = 0x15121c;
@@ -184,6 +186,16 @@ export function drawAvatar(p: Painter, a: AvatarAppearance, x: number, y: number
   p.stroke(lw, OUTLINE);
   drawHairFront(p, a.hairStyle, hair, hx, hy, s);
 
+  if (pose.shades) {
+    p.noStroke();
+    p.fill(0x0b0b10);
+    p.roundRect(hx - 13 * s, eyeY - 4.5 * s, 11 * s, 8 * s, 3 * s);
+    p.roundRect(hx + 2 * s, eyeY - 4.5 * s, 11 * s, 8 * s, 3 * s);
+    p.rect(hx - 3 * s, eyeY - 3 * s, 6 * s, 1.6 * s);
+    p.fill(0xffffff, 0.35);
+    p.rect(hx - 11 * s, eyeY - 3.5 * s, 4 * s, 1.4 * s);
+    p.rect(hx + 4 * s, eyeY - 3.5 * s, 4 * s, 1.4 * s);
+  }
   if (pose.headphones) {
     p.fill(0x2a2c33);
     p.stroke(lw, OUTLINE);

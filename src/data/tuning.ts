@@ -53,6 +53,25 @@ export const tuning = {
   /** PROPOSED: hiring cost. Original hired Facebook friends; replaced by NPC staff here. */
   bartenderHireCost: 500,
 
+  // --- Bouncers & troublemakers ---------------------------------------------
+  /** PROPOSED: chance a new guest is a troublemaker ("jerk" in GameYum). */
+  troublemakerChance: 0.1,
+  /** PROPOSED: troublemakers start acting up after this long in the club. */
+  troubleStartMinMs: 15_000,
+  troubleStartMaxMs: 35_000,
+  /** PROPOSED: happiness lost per second by guests near a troublemaker. */
+  troubleHappinessPerSec: 4,
+  /** PROPOSED: radius (tiles) of a troublemaker's bad influence. */
+  troubleRadius: 2,
+  /** PROPOSED: popularity lost when a troublemaker leaves on their own terms. */
+  troublePopularityPenalty: 3,
+  /** PROPOSED: troublemakers storm out on their own after this long. */
+  troubleMaxMs: 45_000,
+  /** PROPOSED: bouncer coverage radius in tiles (Gamezebo: "within their area" - CONFIRMED concept). */
+  bouncerRadius: 3,
+  /** PROPOSED: how long a bouncer is busy escorting someone out. */
+  bouncerCooldownMs: 6000,
+
   // --- DJ -------------------------------------------------------------------
   /**
    * CONFIRMED (Gamezebo + myfbapplication): starter DJ system plays a 15-minute set.

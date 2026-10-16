@@ -1,5 +1,23 @@
 # Build Log
 
+## 2026-10-16 — Bouncers and troublemakers
+
+**Added**
+- Workers can switch between **Bar Tender** and **Bouncer** (CONFIRMED in the Workers panel). Bouncers get a post (default: just inside the door) and cover a 7×7 area (radius 3, PROPOSED). "Set Post" mode shows that area.
+- **Troublemakers** (GameYum's "jerks"): about 10% of guests (PROPOSED) start acting up after 15–35 s. They wander around and drain the happiness of guests within 2 tiles.
+- A bouncer whose area covers a troublemaker throws them out automatically (Gamezebo: "handle the situation automatically within their area"). **Send Bouncer** on the guest card sends any free bouncer anywhere (GameYum: target icon). Bouncers need 6 s between escorts.
+- An unhandled troublemaker storms out after 45 s and costs 3 popularity. Escorted ones cost nothing.
+- Visuals: bouncers in sunglasses at their post, bartenders behind their bar, a red "!" bubble and pulsing ring on troublemakers, "BOUNCED!" pop.
+- Schema v3 adds `post` to staff, with a v2→v3 migration.
+- Fixed: new guests stepped toward row −1, outside the room. They now step one row into it.
+
+**Commands run and results**
+- `npx vitest run`: 70/70 passed, including 9 new tests for bouncers, troublemakers and the migration.
+- `npm run build`: passes.
+- `node scripts/smoke.mjs`: 18/18 passed (new check: Workers panel switches a worker to Bouncer).
+- The bouncer flow was screenshotted in the real app: trouble → Send Bouncer → escorted, Workers switch, Set Post area.
+
+
 ## 2026-10-16 — Fidelity pass: match the original look, UI and music
 
 The user asked for the people, furniture, interface and music to be close to the original. 20 historical screenshots were found (Gamezebo, Elisa Knows, Pixnet/HotWeb, adlieblogger) and used as **visual reference only**; they are not stored in the repo.

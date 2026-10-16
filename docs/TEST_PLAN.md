@@ -33,6 +33,7 @@ npm run smoke       # needs a prior build; drives the real app in headless Chrom
 | v1 → v2 migration on a real v1 save | `persistence.test.ts` |
 | Music follows the DJ set genre | smoke |
 | DJ card, guest card and Workers panel work through real clicks | smoke |
+| Bouncers: role switch, posts, auto-eject in area, Send Bouncer + cooldown, unhandled-trouble penalty, nearby happiness drain, v2→v3 migration | `bouncers.test.ts`, smoke |
 | Tutorial stays dismissed after reload | smoke |
 | No console errors | smoke |
 

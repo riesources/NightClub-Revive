@@ -40,7 +40,9 @@ export function validateState(d: Record<string, unknown>): { ok: true; state: Cl
   if (!Array.isArray(d.staff)) return bad('Invalid staff');
   const staffIds = new Set<string>();
   for (const s of d.staff as ClubState['staff']) {
-    if (!s || typeof s.id !== 'string' || staffIds.has(s.id) || s.role !== 'bartender' || typeof s.name !== 'string') return bad('Invalid staff member');
+    if (!s || typeof s.id !== 'string' || staffIds.has(s.id) || (s.role !== 'bartender' && s.role !== 'bouncer') || typeof s.name !== 'string') return bad('Invalid staff member');
+    if (s.post !== null && (!s.post || !isInt(s.post.col) || !isInt(s.post.row) || s.post.col >= room.cols || s.post.row >= room.rows)) return bad('Invalid bouncer post');
+    if (s.role === 'bouncer' && s.barId !== null) return bad('Bouncer assigned to a bar');
     if (s.barId !== null && !ids.has(s.barId)) return bad('Staff assigned to missing bar');
     staffIds.add(s.id);
   }

@@ -17,6 +17,7 @@ export type GuestState =
   | 'DRINKING'
   | 'SEEKING_SEAT'
   | 'SITTING_OR_SOCIALIZING'
+  | 'TROUBLEMAKER'
   | 'LEAVING';
 
 export const WALKING_STATES: ReadonlySet<GuestState> = new Set([
@@ -24,20 +25,23 @@ export const WALKING_STATES: ReadonlySet<GuestState> = new Set([
   'WALKING_TO_DANCE_FLOOR',
   'THIRSTY',
   'SEEKING_SEAT',
+  'TROUBLEMAKER',
   'LEAVING',
 ]);
 
 /** Legal transitions; the simulation asserts against this table. */
 export const TRANSITIONS: Record<GuestState, readonly GuestState[]> = {
   ENTERING: ['CHOOSING_ACTIVITY', 'LEAVING'],
-  CHOOSING_ACTIVITY: ['WALKING_TO_DANCE_FLOOR', 'THIRSTY', 'SEEKING_SEAT', 'LEAVING', 'CHOOSING_ACTIVITY'],
-  WALKING_TO_DANCE_FLOOR: ['DANCING', 'CHOOSING_ACTIVITY', 'THIRSTY', 'LEAVING'],
-  DANCING: ['CHOOSING_ACTIVITY', 'THIRSTY', 'LEAVING'],
+  CHOOSING_ACTIVITY: ['WALKING_TO_DANCE_FLOOR', 'THIRSTY', 'SEEKING_SEAT', 'LEAVING', 'CHOOSING_ACTIVITY', 'TROUBLEMAKER'],
+  WALKING_TO_DANCE_FLOOR: ['DANCING', 'CHOOSING_ACTIVITY', 'THIRSTY', 'LEAVING', 'TROUBLEMAKER'],
+  DANCING: ['CHOOSING_ACTIVITY', 'THIRSTY', 'LEAVING', 'TROUBLEMAKER'],
   THIRSTY: ['QUEUING_FOR_BAR', 'CHOOSING_ACTIVITY', 'LEAVING'],
   QUEUING_FOR_BAR: ['DRINKING', 'CHOOSING_ACTIVITY', 'LEAVING'],
-  DRINKING: ['CHOOSING_ACTIVITY', 'LEAVING'],
-  SEEKING_SEAT: ['SITTING_OR_SOCIALIZING', 'CHOOSING_ACTIVITY', 'THIRSTY', 'LEAVING'],
-  SITTING_OR_SOCIALIZING: ['CHOOSING_ACTIVITY', 'THIRSTY', 'LEAVING'],
+  DRINKING: ['CHOOSING_ACTIVITY', 'LEAVING', 'TROUBLEMAKER'],
+  SEEKING_SEAT: ['SITTING_OR_SOCIALIZING', 'CHOOSING_ACTIVITY', 'THIRSTY', 'LEAVING', 'TROUBLEMAKER'],
+  SITTING_OR_SOCIALIZING: ['CHOOSING_ACTIVITY', 'THIRSTY', 'LEAVING', 'TROUBLEMAKER'],
+  /** CONFIRMED concept (GameYum "jerks", Gamezebo bouncers); behaviour PROPOSED. */
+  TROUBLEMAKER: ['LEAVING'],
   LEAVING: ['LEAVING'],
 };
 
@@ -51,6 +55,13 @@ export interface Guest {
   spent: number;
   tipRate: number;
   guestClass: 'Regular';
+  /** Hidden until they act up at `troubleAt`. */
+  troublemaker: boolean;
+  troubleAt: number;
+  /** Thrown out by a bouncer. */
+  escorted: boolean;
+  /** Stormed out on their own after making trouble (costs popularity). */
+  troubleUnresolved: boolean;
   seed: number;
   appearance: AvatarAppearance;
   prefGenre: Genre;

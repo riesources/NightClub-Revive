@@ -5,7 +5,8 @@ export type Mode =
   | { kind: 'normal' }
   | { kind: 'place'; catalogId: string; facing: Facing }
   | { kind: 'move'; furnitureId: string; facing: Facing }
-  | { kind: 'dedicate' };
+  | { kind: 'dedicate' }
+  | { kind: 'post'; staffId: string };
 
 export type Selection = { kind: 'furniture'; id: string } | { kind: 'guest'; id: string } | null;
 

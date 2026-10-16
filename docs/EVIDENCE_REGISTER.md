@@ -77,7 +77,8 @@ Reference screenshots were downloaded for **visual reference only**. They are co
 | Club expands on level-up | CONFIRMED | S2, S3 | `creditIncome` |
 | Dressing room has a randomize dice | CONFIRMED | S1 | `dressingRoom.ts` |
 | Luxury raises tips | SOURCED (1) | S3 | `tipFor` |
-| Bartender trick/speed modes; bouncers | CONFIRMED | S1, S2, S8 | Not built (P1) |
+| Bouncers remove troublemakers, automatically within their area or by targeting | CONFIRMED | S1, S2, S8 | `staff.ts` (`switchRole`, `setBouncerPost`), `GuestSimulation.runBouncers` / `sendBouncer` |
+| Bartender trick/speed modes | CONFIRMED | S2, S3 | Not built (P1) |
 | Celebrities with parody names; celebrity wall | CONFIRMED | S2, S3, S8 | Not built (P2). Use original names only |
 | Music was licensed commercial tracks | CONFIRMED | S7, S8 | **Replaced** by original procedural loops (`audio/music.ts`) |
 | Party theme names | UNVERIFIED | — | Not used |
