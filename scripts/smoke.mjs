@@ -138,6 +138,9 @@ try {
   await click('.wslot.open .btn');
   const after2 = await page.evaluate(() => window.__ncr.game.state.staff.length);
   check('Workers panel hires into an open slot; higher slots stay locked', after2 === before2 + 1 && (await page.locator('.wslot.locked').count()) === 4);
+  await page.click('.wslot.filled >> nth=1 >> .w-switch');
+  const role = await page.evaluate(() => window.__ncr.game.state.staff[1]?.role);
+  check('Workers panel switches a worker to Bouncer', role === 'bouncer');
   await page.screenshot({ path: `${SHOTS}/06-workers.png` });
   await page.click('.panel-tabbed .btn.ok');
 

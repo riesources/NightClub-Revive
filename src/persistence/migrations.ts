@@ -60,6 +60,12 @@ export const MIGRATIONS: Record<number, Migration> = {
     }
     return d;
   },
+  /** v2 -> v3: staff gain a `post` (bouncer position); everyone hired so far is a bartender. */
+  2: (raw) => {
+    const d = structuredClone(raw) as Record<string, unknown>;
+    if (Array.isArray(d.staff)) d.staff = (d.staff as Record<string, unknown>[]).map((s) => ({ ...s, post: null }));
+    return d;
+  },
 };
 
 export type MigrateResult = { ok: true; data: Record<string, unknown> } | { ok: false; reason: string };

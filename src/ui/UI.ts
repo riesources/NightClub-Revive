@@ -17,6 +17,7 @@ import { openDressingRoom } from './dressingRoom';
 import { ICONS } from './icons';
 import type { Interaction } from './interaction';
 import { furnitureThumb, portrait } from './portrait';
+import { staffAppearance } from './staffLook';
 
 /**
  * Replace a container's children only if the resulting markup differs. Rebuilding
@@ -62,6 +63,8 @@ function quoteFor(g: Guest, game: Game): string {
   const playing = dj.isPlaying(s, Date.now());
   const queue = g.barId ? (game.sim.queues.get(g.barId)?.length ?? 0) : 0;
   switch (g.state) {
+    case 'TROUBLEMAKER':
+      return "Hey! Who are YOU looking at?! This place is mine now!";
     case 'QUEUING_FOR_BAR':
       return queue > 3 ? 'This line is huge! Somebody hire another bartender.' : 'One drink please - make it a strong one!';
     case 'THIRSTY':
@@ -146,6 +149,12 @@ export class UI {
         break;
       case 'noBartender':
         this.toast('A guest wanted a drink but no bar is staffed.', 'error');
+        break;
+      case 'troubleStarted':
+        if (!e.covered) this.toast('A troublemaker is causing a scene! Click them and Send Bouncer.', 'error', 4000);
+        break;
+      case 'troubleUnresolved':
+        this.toast(`A troublemaker stormed out. Popularity -${tuning.troublePopularityPenalty}`, 'error');
         break;
     }
   }
@@ -366,6 +375,9 @@ export class UI {
           null,
           [
             h('div', { class: 'bubble' }, live(`"${quoteFor(g, this.game)}"`)),
+            g.state === 'TROUBLEMAKER'
+              ? h('div', { class: 'card-actions' }, h('button', { class: 'btn danger', onclick: () => this.game.sendBouncer(g.id) }, 'Send Bouncer'))
+              : null,
             h(
               'div',
               { class: 'stats' },
@@ -374,7 +386,7 @@ export class UI {
               h('div', {}, h('span', {}, 'Happiness:'), h('b', {}, live(String(Math.round(g.happiness))))),
             ),
           ],
-          g.guestClass,
+          g.state === 'TROUBLEMAKER' ? 'Troublemaker' : g.guestClass,
         );
       }
     } else if (c.kind === 'furniture') {
@@ -546,7 +558,9 @@ export class UI {
           ? `Moving — click a tile to drop${features.rotation ? ', R to rotate' : ''}, Esc to cancel (no charge)`
           : m.kind === 'dedicate'
             ? 'Dedicate Song — click a guest. Esc to cancel.'
-            : '';
+            : m.kind === 'post'
+              ? `Set bouncer post — click a tile. They cover ${tuning.bouncerRadius} tiles around it. Esc to cancel.`
+              : '';
     this.modeBar.textContent = text;
     this.modeBar.classList.toggle('hidden', !text);
     if (text) this.modeBar.append(h('button', { class: 'btn tiny', onclick: () => this.ix.setMode({ kind: 'normal' }) }, 'Cancel'));
@@ -616,11 +630,34 @@ export class UI {
           return h(
             'div',
             { class: 'wslot filled' },
-            h('div', { class: 'w-portrait' }, portrait(staffLook(m.name), 64)),
-            h('div', { class: 'w-role' }, 'Bar Tender'),
+            h('div', { class: 'w-portrait' }, portrait(staffAppearance(m), 64, { shades: m.role === 'bouncer' })),
+            h('div', { class: 'w-role' }, m.role === 'bouncer' ? 'Bouncer' : 'Bar Tender'),
             h('div', { class: 'w-name' }, m.name),
-            h('button', { class: 'w-switch', disabled: true, title: 'Bouncers arrive in a later update' }, 'Switch to Bouncer'),
             h(
+              'button',
+              {
+                class: 'w-switch',
+                onclick: () => {
+                  this.game.switchRole(m.id);
+                  render();
+                },
+              },
+              m.role === 'bouncer' ? 'Switch to Bartender' : 'Switch to Bouncer',
+            ),
+            m.role === 'bouncer'
+              ? h(
+                  'button',
+                  {
+                    class: 'btn tiny',
+                    title: `Pick where ${m.name} stands. They handle trouble within ${tuning.bouncerRadius} tiles.`,
+                    onclick: () => {
+                      el.remove();
+                      this.ix.setMode({ kind: 'post', staffId: m.id });
+                    },
+                  },
+                  'Set Post',
+                )
+              : h(
               'select',
               {
                 class: 'w-assign',
@@ -667,7 +704,7 @@ export class UI {
         h('div', { class: 'tab-label' }, icon(ICONS.workers, 'tab-icon'), 'Workers'),
         h('button', { class: 'btn ok corner', onclick: () => el.remove() }, 'OK'),
         body,
-        h('div', { class: 'placeholder-note' }, `${workerSlots(this.game.state.level)} worker slots open. The original hired Facebook friends; this build uses NPC staff.`),
+        h('div', { class: 'placeholder-note' }, `${workerSlots(this.game.state.level)} worker slots open. Bouncers throw out troublemakers within ${tuning.bouncerRadius} tiles of their post. The original hired Facebook friends; this build uses NPC staff.`),
       ),
     );
     render();
@@ -802,17 +839,4 @@ export class UI {
   selectFurniture(id: string): void {
     this.ix.select({ kind: 'furniture', id });
   }
-}
-
-/** Stable NPC staff appearance from their name. */
-function staffLook(name: string): AvatarAppearance {
-  let seed = 7;
-  for (const ch of name) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
-  const looks: AvatarAppearance[] = [
-    { gender: 'm', skin: '#c98b5e', hairStyle: 'fedora', hairColor: '#1b1b1b', top: '#262a36', bottom: '#222222', shoes: '#1b1b1b' },
-    { gender: 'f', skin: '#f2c9a0', hairStyle: 'ponytail', hairColor: '#a0522d', top: '#ffffff', bottom: '#222222', shoes: '#1b1b1b' },
-    { gender: 'm', skin: '#7f4a2a', hairStyle: 'short', hairColor: '#1b1b1b', top: '#e0344a', bottom: '#1f2a44', shoes: '#ffffff' },
-    { gender: 'f', skin: '#e3ac7c', hairStyle: 'bob', hairColor: '#1b1b1b', top: '#262a36', bottom: '#1f2a44', shoes: '#e0344a' },
-  ];
-  return looks[seed % looks.length];
 }

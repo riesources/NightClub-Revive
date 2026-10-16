@@ -6,8 +6,8 @@ import * as dj from './dj';
 import { buyAndPlace, moveFurniture, sellFurniture } from './economy';
 import { GuestSimulation, type SimEvent, type SimHost } from './guests/simulation';
 import { createRng, type Rng } from './rng';
-import { assignBartender, hireBartender } from './staff';
-import type { ClubState, Facing, Genre, Result } from './types';
+import { assignBartender, hireBartender, setBouncerPost, switchRole } from './staff';
+import type { ClubState, Facing, Genre, GridPoint, Result } from './types';
 
 export type GameEvent = SimEvent | { type: 'stateChanged' } | { type: 'notice'; message: string; tone: 'info' | 'error' | 'good' };
 
@@ -87,6 +87,17 @@ export class Game implements SimHost {
   }
   assignBartender(staffId: string, barId: string | null) {
     return this.apply(assignBartender(this._state, staffId, barId));
+  }
+  switchRole(staffId: string) {
+    return this.apply(switchRole(this._state, staffId));
+  }
+  setBouncerPost(staffId: string, post: GridPoint) {
+    return this.apply(setBouncerPost(this._state, staffId, post), 'Bouncer moved');
+  }
+  sendBouncer(guestId: string, now = Date.now()) {
+    const r = this.sim.sendBouncer(this, guestId, now);
+    if (!r.ok) this.emit({ type: 'notice', message: r.reason, tone: 'error' });
+    return r;
   }
   startSet(genre: Genre, now = Date.now()) {
     return this.apply(dj.startSet(this._state, genre, now), 'The set has started!');

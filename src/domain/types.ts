@@ -1,6 +1,6 @@
 import type { AvatarAppearance } from '../data/appearanceCatalog';
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /** CONFIRMED genres: GameYum guide lists club mix, hip hop, electronica, pop. */
 export const GENRES = ['club_mix', 'hiphop', 'electronic', 'pop'] as const;
@@ -30,10 +30,13 @@ export interface FurnitureInstance {
 
 export interface StaffMember {
   id: string;
-  role: 'bartender';
+  /** CONFIRMED roles (Workers panel): Bar Tender / Bouncer, switchable. */
+  role: 'bartender' | 'bouncer';
   name: string;
   /** Furniture id of the bar this bartender works, or null if unassigned. */
   barId: string | null;
+  /** Bouncers only: the tile they stand on; they cover an area around it. */
+  post: GridPoint | null;
 }
 
 export interface DJState {

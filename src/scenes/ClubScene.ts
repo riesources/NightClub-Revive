@@ -11,6 +11,7 @@ import { drawFurniture, drawTileDiamond } from '../render/furnitureArt';
 import { DEFAULT_ISO, depthFor, gridToScreen, screenToGrid, type IsoConfig } from '../render/isoProjection';
 import { PhaserPainter, shade } from '../render/painter';
 import type { Interaction } from '../ui/interaction';
+import { staffAppearance } from '../ui/staffLook';
 
 const WALL_H = 96;
 const DEPTH_FLOOR = -1_000_000;
@@ -32,6 +33,7 @@ export class ClubScene extends Phaser.Scene {
   private guestGfx = new Map<string, Phaser.GameObjects.Graphics>();
   private debugText = new Map<string, Phaser.GameObjects.Text>();
   private djAvatar!: Phaser.GameObjects.Graphics;
+  private staffGfx = new Map<string, Phaser.GameObjects.Graphics>();
   private roomKey = '';
   private hover: { col: number; row: number } | null = null;
   private downAt: { x: number; y: number; sx: number; sy: number } | null = null;
@@ -154,6 +156,10 @@ export class ClubScene extends Phaser.Scene {
       }
       return;
     }
+    if (m.kind === 'post') {
+      if (this.game_.setBouncerPost(m.staffId, cell).ok) this.interaction.setMode({ kind: 'normal' });
+      return;
+    }
     if (m.kind === 'move') {
       const r = this.game_.move(m.furnitureId, cell.col, cell.row, m.facing);
       if (r.ok) {
@@ -179,6 +185,7 @@ export class ClubScene extends Phaser.Scene {
   private onGameEvent(e: GameEvent): void {
     if (e.type === 'sale') this.floatText(e.x, e.y, `$${e.paid}`, '#e0102a');
     if (e.type === 'cover') this.floatText(e.x, e.y, `$${e.paid}`, '#e0102a');
+    if (e.type === 'bounced') this.floatText(e.x, e.y, 'BOUNCED!', '#ff8a00');
     if (e.type === 'levelUp') {
       this.redrawRoom(true);
       this.centerCamera();
@@ -306,6 +313,7 @@ export class ClubScene extends Phaser.Scene {
     this.drawFurniture(state, playing ? pulse : 0.15);
     this.drawGuests(now, playing);
     this.drawDj(state, now, playing);
+    this.drawStaff(state, now);
     this.drawOverlay(state);
   }
 
@@ -356,6 +364,10 @@ export class ClubScene extends Phaser.Scene {
       const dancing = guest.state === 'DANCING' && playing;
       const walking = guest.path.length > 0;
       const painter = new PhaserPainter(g);
+      if (guest.state === 'TROUBLEMAKER') {
+        g.lineStyle(2.5, 0xe0102a, 0.5 + 0.4 * Math.abs(Math.sin(now / 180)));
+        g.strokeEllipse(p.x, p.y, 34, 14);
+      }
       if (guest.id === selected) {
         g.lineStyle(3, 0x2a7bff, 0.95);
         g.strokeEllipse(p.x, p.y - 40, 32, 32);
@@ -382,8 +394,9 @@ export class ClubScene extends Phaser.Scene {
    */
   private drawBubble(g: Phaser.GameObjects.Graphics, guest: Guest, x: number, y: number, playing: boolean): void {
     const mood = moodOf(guest.happiness, tuning.happyThreshold, tuning.unhappyThreshold);
-    let icon: 'chat' | 'drink' | 'frown' | 'exit' | null = null;
-    if (guest.state === 'LEAVING') icon = 'exit';
+    let icon: 'chat' | 'drink' | 'frown' | 'exit' | 'anger' | null = null;
+    if (guest.state === 'TROUBLEMAKER') icon = 'anger';
+    else if (guest.state === 'LEAVING') icon = 'exit';
     else if (guest.state === 'QUEUING_FOR_BAR' || guest.state === 'THIRSTY') icon = 'drink';
     else if (mood === 'unhappy') icon = 'frown';
     else if (guest.state === 'SITTING_OR_SOCIALIZING' || (!playing && guest.state === 'DANCING')) icon = (guest.seed % 2 === 0 ? 'chat' : null);
@@ -417,6 +430,58 @@ export class ClubScene extends Phaser.Scene {
         g.fillRect(x - 4, y - 4, 6, 8);
         g.fillTriangle(x + 1, y - 4, x + 6, y, x + 1, y + 4);
         break;
+      case 'anger':
+        g.fillStyle(0xe0102a, 1);
+        g.fillRect(x - 1.4, y - 6, 2.8, 7.5);
+        g.fillCircle(x, y + 4.2, 1.6);
+        break;
+    }
+  }
+
+  /**
+   * Staff in the club: bartenders behind their bar, bouncers in shades at their
+   * post. Busy bouncers (escorting someone out) are drawn faded.
+   */
+  private drawStaff(state: ClubState, now: number): void {
+    const seen = new Set<string>();
+    for (const s of state.staff) {
+      let at: { x: number; y: number; depth: number } | null = null;
+      if (s.role === 'bouncer' && s.post) {
+        at = { x: s.post.col + 0.5, y: s.post.row + 0.5, depth: (s.post.col + s.post.row + 1) * 100 + 50 };
+      } else if (s.role === 'bartender' && s.barId) {
+        const bar = state.furniture.find((f) => f.id === s.barId);
+        if (bar) {
+          const { w, h } = footprintSize(bar.catalogId, bar.facing);
+          // stand along the back edge of the bar
+          at = bar.facing === 0 ? { x: bar.col + w / 2, y: bar.row + 0.05, depth: 0 } : { x: bar.col + 0.05, y: bar.row + h / 2, depth: 0 };
+          at.depth = (depthFor(bar.col, bar.row, w, h) - 1) * 100 - 1;
+        }
+      }
+      if (!at) continue;
+      seen.add(s.id);
+      let g = this.staffGfx.get(s.id);
+      if (!g) {
+        g = this.add.graphics();
+        this.staffGfx.set(s.id, g);
+      }
+      g.clear();
+      g.setDepth(at.depth);
+      const p = gridToScreen(at.x, at.y, this.cfg);
+      const busy = s.role === 'bouncer' && (this.game_.sim.bouncerBusyUntil.get(s.id) ?? 0) > now;
+      g.setAlpha(busy ? 0.45 : 1);
+      drawAvatar(new PhaserPainter(g), staffAppearance(s), p.x, p.y, 0.74, {
+        phase: (now / 1100 + s.id.length) % 1,
+        dancing: false,
+        walking: false,
+        arms: s.role === 'bartender' ? 'drink' : 'down',
+        shades: s.role === 'bouncer',
+      });
+    }
+    for (const [id, g] of this.staffGfx) {
+      if (!seen.has(id)) {
+        g.destroy();
+        this.staffGfx.delete(id);
+      }
     }
   }
 
@@ -456,6 +521,20 @@ export class ClubScene extends Phaser.Scene {
         const { w, h } = footprintSize(catalogId, m.facing);
         drawTileDiamond(g, this.hover.col, this.hover.row, w, h, this.cfg, valid ? 0x3ddc84 : 0xff3d3d, 0.35, valid ? 0x3ddc84 : 0xff3d3d);
         drawFurniture(g, def, this.hover.col, this.hover.row, w, h, this.cfg, { alpha: 0.6, tint: valid ? undefined : 0xff5555, pulse: 0.6 });
+      }
+    } else if (m.kind === 'post') {
+      const r = tuning.bouncerRadius;
+      const { cols, rows } = state.room;
+      const area = (c: number, rr: number, color: number, a: number) => {
+        const c0 = Math.max(0, c - r);
+        const r0 = Math.max(0, rr - r);
+        drawTileDiamond(g, c0, r0, Math.min(cols, c + r + 1) - c0, Math.min(rows, rr + r + 1) - r0, this.cfg, color, a, color, 0.9);
+      };
+      const cur = state.staff.find((s) => s.id === m.staffId)?.post;
+      if (cur) area(cur.col, cur.row, 0x7a7f8c, 0.12);
+      if (this.hover && this.hover.col >= 0 && this.hover.row >= 0 && this.hover.col < cols && this.hover.row < rows) {
+        area(this.hover.col, this.hover.row, 0xff8a00, 0.18);
+        drawTileDiamond(g, this.hover.col, this.hover.row, 1, 1, this.cfg, 0xff8a00, 0.5, 0xffffff, 0.9);
       }
     } else if (this.hover && m.kind === 'normal') {
       const { cols, rows } = state.room;

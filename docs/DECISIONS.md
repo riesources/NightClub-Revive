@@ -19,4 +19,5 @@
 | D15 | **Music is original WebAudio synthesis**, one loop per genre | The original streamed licensed commercial tracks (screenshots credit real artists and link to iTunes). Reusing them would infringe copyright | PROPOSED |
 | D16 | Dock mapping: fedora bust = Dress Up, headphones bust = DJ | Tuxedo = Workers and star = Celebrities are confirmed by panel tabs; the other two icons' functions aren't shown | INFERRED |
 | D17 | Schema v2: adds gender + shoes, new palettes, renames `stool_basic`, moves the door. The v1 → v2 migration refunds furniture standing on the new door | First real migration; saves from the earlier prototype keep working | PROPOSED |
+| D19 | Bouncers cover a square area around a post (radius 3); troublemakers drain nearby happiness and cost popularity only if left to storm out | Matches the sources' "within their area" and target-icon descriptions; all numbers PROPOSED in `tuning.ts` | PROPOSED |
 | D18 | Ticking UI values are marked `data-live` and patched in place | Fixes a real bug found by the smoke test: the DJ card rebuilt every second and swallowed clicks | PROPOSED |

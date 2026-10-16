@@ -6,7 +6,7 @@ import { drawFurniture } from '../render/furnitureArt';
 import { CanvasPainter } from '../render/painter';
 
 /** Head-and-shoulders (or full body) portrait of an avatar on a canvas. */
-export function portrait(a: AvatarAppearance, size: number, opts: { full?: boolean; headphones?: boolean } = {}): HTMLCanvasElement {
+export function portrait(a: AvatarAppearance, size: number, opts: { full?: boolean; headphones?: boolean; shades?: boolean } = {}): HTMLCanvasElement {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const c = document.createElement('canvas');
   c.width = size * dpr;
@@ -19,10 +19,10 @@ export function portrait(a: AvatarAppearance, size: number, opts: { full?: boole
   ctx.scale(dpr, dpr);
   if (opts.full) {
     const scale = size / 82;
-    drawAvatar(new CanvasPainter(ctx), a, size / 2, size - 3 * scale, scale, { phase: 0.25, dancing: false, walking: false, arms: 'down', headphones: opts.headphones });
+    drawAvatar(new CanvasPainter(ctx), a, size / 2, size - 3 * scale, scale, { phase: 0.25, dancing: false, walking: false, arms: 'down', headphones: opts.headphones, shades: opts.shades });
   } else {
     const scale = size / 50;
-    drawAvatar(new CanvasPainter(ctx), a, size / 2, size * 1.68, scale, { phase: 0.25, dancing: false, walking: false, arms: 'down', headphones: opts.headphones });
+    drawAvatar(new CanvasPainter(ctx), a, size / 2, size * 1.68, scale, { phase: 0.25, dancing: false, walking: false, arms: 'down', headphones: opts.headphones, shades: opts.shades });
   }
   return c;
 }

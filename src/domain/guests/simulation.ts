@@ -7,7 +7,7 @@ import { isPlaying } from '../dj';
 import { adjacentWalkableCells, blockedCells, cellKey, entranceCell, inBounds, instanceCells } from '../grid';
 import { findPath } from '../pathfinding/astar';
 import { pickOne, type Rng } from '../rng';
-import { bartenderForBar } from '../staff';
+import { bartenderForBar, inBouncerArea } from '../staff';
 import { GENRES, type ClubState, type GridPoint } from '../types';
 import { TRANSITIONS, WALKING_STATES, guestCell, type Guest, type GuestState } from './guest';
 
@@ -24,7 +24,10 @@ export type SimEvent =
   | { type: 'levelUp'; level: number; reward: number }
   | { type: 'outOfDrinks' }
   | { type: 'noBartender' }
-  | { type: 'guestLeft'; guestId: string; happy: boolean };
+  | { type: 'guestLeft'; guestId: string; happy: boolean }
+  | { type: 'troubleStarted'; guestId: string; covered: boolean }
+  | { type: 'bounced'; guestId: string; staffId: string; x: number; y: number }
+  | { type: 'troubleUnresolved'; guestId: string };
 
 interface WorldCache {
   state: ClubState;
@@ -54,6 +57,8 @@ export class GuestSimulation {
   /** Count of illegal transitions attempted (should stay 0; surfaced in debug + tests). */
   illegalTransitions = 0;
   spawnEnabled = true;
+  /** Bouncer staff id -> time they are free again after an escort. */
+  readonly bouncerBusyUntil = new Map<string, number>();
 
   constructor(private readonly rng: Rng) {}
 
@@ -90,6 +95,10 @@ export class GuestSimulation {
       spent: 0,
       tipRate: Math.round((tuning.tipRateMin + this.rng() * (tuning.tipRateMax - tuning.tipRateMin)) * 100) / 100,
       guestClass: 'Regular',
+      troublemaker: this.rng() < tuning.troublemakerChance,
+      troubleAt: now + tuning.troubleStartMinMs + this.rng() * (tuning.troubleStartMaxMs - tuning.troubleStartMinMs),
+      escorted: false,
+      troubleUnresolved: false,
       seed,
       appearance: appearanceFromSeed(seed),
       prefGenre: pickOne(this.rng, GENRES)!,
@@ -112,7 +121,7 @@ export class GuestSimulation {
       seatId: null,
     };
     const w = this.world(state);
-    const inside = { col: e.col, row: e.row - 1 };
+    const inside = { col: e.col, row: e.row + 1 };
     if (!this.walkTo(g, w, state, inside)) g.path = [];
     this.guests.push(g);
     return g;
@@ -162,13 +171,20 @@ export class GuestSimulation {
       this.think(g, w, state, now, host);
     }
 
+    this.applyTrouble(dt);
+    this.runBouncers(host, state, now);
     state = this.serveBars(host, now);
 
     if (departed.length) {
       const draft = clone(state);
       for (const g of departed) {
-        const happy = g.happiness >= tuning.happyThreshold;
-        if (happy) adjustPopularity(draft, tuning.popularityGainPerHappyGuest);
+        const happy = g.happiness >= tuning.happyThreshold && !g.escorted && !g.troubleUnresolved;
+        if (g.troubleUnresolved) {
+          adjustPopularity(draft, -tuning.troublePopularityPenalty);
+          host.emit({ type: 'troubleUnresolved', guestId: g.id });
+        } else if (g.escorted) {
+          // Thrown out: no effect on popularity either way.
+        } else if (happy) adjustPopularity(draft, tuning.popularityGainPerHappyGuest);
         else if (g.happiness < tuning.unhappyThreshold) adjustPopularity(draft, -tuning.popularityLossPerUnhappyGuest);
         draft.stats.guestsVisited += 1;
         this.removeFromQueue(g);
@@ -250,6 +266,28 @@ export class GuestSimulation {
 
   private think(g: Guest, w: WorldCache, state: ClubState, now: number, host: SimHost): void {
     const arrived = g.path.length === 0;
+    if (g.state === 'TROUBLEMAKER') {
+      if (now - g.stateSince > tuning.troubleMaxMs) {
+        g.troubleUnresolved = true;
+        this.leave(g, w, state, now);
+      } else if (arrived && !this.wander(g, w, state)) {
+        g.troubleUnresolved = true;
+        this.leave(g, w, state, now);
+      }
+      return;
+    }
+    if (
+      g.troublemaker &&
+      now >= g.troubleAt &&
+      ['CHOOSING_ACTIVITY', 'DANCING', 'SITTING_OR_SOCIALIZING', 'DRINKING', 'WALKING_TO_DANCE_FLOOR', 'SEEKING_SEAT'].includes(g.state)
+    ) {
+      this.removeFromQueue(g);
+      this.setState(g, 'TROUBLEMAKER', now);
+      g.seatId = null;
+      if (!this.wander(g, w, state)) g.path = [];
+      host.emit({ type: 'troubleStarted', guestId: g.id, covered: this.coveringBouncer(state, g, now) !== null });
+      return;
+    }
     if (g.state !== 'LEAVING' && (now >= g.visitEndsAt || g.happiness <= 5)) {
       this.leave(g, w, state, now);
       return;
@@ -415,6 +453,67 @@ export class GuestSimulation {
     return state;
   }
 
+  /** Troublemakers roam the club looking for someone to bother. */
+  private wander(g: Guest, w: WorldCache, state: ClubState): boolean {
+    for (let tries = 0; tries < 6; tries++) {
+      const target = { col: Math.floor(this.rng() * state.room.cols), row: 1 + Math.floor(this.rng() * (state.room.rows - 1)) };
+      if (this.walkTo(g, w, state, target)) return true;
+    }
+    return false;
+  }
+
+  /** Guests near a troublemaker lose happiness (PROPOSED). */
+  private applyTrouble(dt: number): void {
+    const trouble = this.guests.filter((g) => g.state === 'TROUBLEMAKER');
+    if (!trouble.length || dt <= 0) return;
+    for (const g of this.guests) {
+      if (g.state === 'TROUBLEMAKER' || g.state === 'LEAVING') continue;
+      if (trouble.some((t) => Math.max(Math.abs(t.x - g.x), Math.abs(t.y - g.y)) <= tuning.troubleRadius)) {
+        g.happiness = Math.max(0, g.happiness - tuning.troubleHappinessPerSec * dt);
+      }
+    }
+  }
+
+  private freeBouncers(state: ClubState, now: number) {
+    return state.staff.filter((s) => s.role === 'bouncer' && s.post && (this.bouncerBusyUntil.get(s.id) ?? 0) <= now);
+  }
+
+  /** A free bouncer whose area covers this guest, if any. */
+  private coveringBouncer(state: ClubState, g: Guest, now: number) {
+    return this.freeBouncers(state, now).find((b) => inBouncerArea(b.post!, g.x, g.y, tuning.bouncerRadius)) ?? null;
+  }
+
+  /** Gamezebo: "Your bouncer will handle the situation automatically within their area." */
+  private runBouncers(host: SimHost, state: ClubState, now: number): void {
+    for (const g of this.guests) {
+      if (g.state !== 'TROUBLEMAKER') continue;
+      const b = this.coveringBouncer(state, g, now);
+      if (b) this.eject(host, state, g, b.id, now);
+    }
+  }
+
+  private eject(host: SimHost, state: ClubState, g: Guest, staffId: string, now: number): void {
+    g.escorted = true;
+    this.bouncerBusyUntil.set(staffId, now + tuning.bouncerCooldownMs);
+    host.emit({ type: 'bounced', guestId: g.id, staffId, x: g.x, y: g.y });
+    this.leave(g, this.world(state), state, now);
+  }
+
+  /**
+   * Manual: send any free bouncer at a troublemaker anywhere in the club
+   * (GameYum: the target icon sends the bouncer to a jerk).
+   */
+  sendBouncer(host: SimHost, guestId: string, now: number): { ok: true } | { ok: false; reason: string } {
+    const state = host.getState();
+    const g = this.guests.find((x) => x.id === guestId);
+    if (!g || g.state !== 'TROUBLEMAKER') return { ok: false, reason: "That guest isn't causing trouble" };
+    if (!state.staff.some((s) => s.role === 'bouncer')) return { ok: false, reason: 'Hire or switch a worker to Bouncer first' };
+    const b = this.freeBouncers(state, now)[0];
+    if (!b) return { ok: false, reason: 'Your bouncers are busy - try again in a moment' };
+    this.eject(host, state, g, b.id, now);
+    return { ok: true };
+  }
+
   /** Drop the Bass: send every free guest to the bar (Gamezebo: "make your guests go to the bar"). */
   dropTheBass(host: SimHost, now: number): number {
     const state = host.getState();
@@ -443,6 +542,7 @@ export class GuestSimulation {
     this.guests = [];
     this.queues.clear();
     this.nextServeAt.clear();
+    this.bouncerBusyUntil.clear();
     this.cache = null;
     this.lastUpdate = null;
   }
