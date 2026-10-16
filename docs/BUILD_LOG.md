@@ -16,7 +16,8 @@
 **Commands run and results**
 - `npx vitest run`: 95/95 passed (5 new unlock tests).
 - `npm run build`: passes.
-- `node scripts/smoke.mjs`: see the PR (new check: the progress screen opens from the badge and highlights the current level).
+- `node scripts/smoke.mjs`: 22/22 passed (new check: the progress screen opens from the badge and highlights the current level).
+- Real-app screenshot reviewed: progress screen at level 1.
 
 
 ## 2026-10-16 — Parties

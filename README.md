@@ -11,6 +11,8 @@ The layout, characters, furniture and interface are modelled closely on historic
 | ![DJ card](docs/screenshots/dj.png) | ![Guest card](docs/screenshots/guest.png) | ![Build mode](docs/screenshots/build.png) |
 | **Dressing room** | **Workers** | **Parties** |
 | ![Dressing room](docs/screenshots/dress.png) | ![Workers panel](docs/screenshots/workers.png) | ![Party planner](docs/screenshots/party.png) |
+| **Progress** | | |
+| ![Progress screen](docs/screenshots/progress.png) | | |
 
 ## Play online
 
