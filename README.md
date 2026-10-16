@@ -12,7 +12,11 @@ The layout, characters, furniture and interface are modelled closely on historic
 | **Dressing room** | **Workers** | |
 | ![Dressing room](docs/screenshots/dress.png) | ![Workers panel](docs/screenshots/workers.png) | |
 
-## How to run it
+## Play online
+
+**▶ Play now: https://riesources.github.io/NightClub-Revive/** (no install needed, works in any modern desktop browser)
+
+## How to run it locally
 
 **You need:** [Node.js](https://nodejs.org/) 18 or newer (20+ recommended) and a modern desktop browser (Chrome, Edge, Firefox or Safari).
 
