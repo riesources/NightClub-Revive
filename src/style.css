@@ -1837,3 +1837,246 @@ button {
   font-weight: normal;
   line-height: 1.35;
 }
+
+/* Progress screen */
+.level-badge,
+.xp {
+  cursor: pointer;
+}
+
+.progress-panel {
+  width: min(680px, calc(100vw - 24px));
+  max-height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+}
+
+.pg-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.pg-level {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 3px solid var(--white);
+  background: var(--gloss-blue);
+  box-shadow: 0 0 0 3px var(--ink), 0 0 16px #7fd0ff;
+  font: 900 28px/50px 'Arial Black', Arial, sans-serif;
+  text-align: center;
+}
+
+.pg-top-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.pg-title {
+  font: 900 20px/1.2 'Arial Black', Arial, sans-serif;
+  color: #eaf7ff;
+}
+
+.pg-bar {
+  height: 14px;
+  margin: 4px 0 2px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: #0b1a3d;
+  overflow: hidden;
+}
+
+.pg-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3fa0ff, #7df9ff);
+}
+
+.pg-bar-text {
+  font-size: 11px;
+  font-weight: normal;
+}
+
+.pg-stats {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.pg-stat {
+  padding: 4px 2px;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  background: rgba(10, 30, 80, 0.45);
+  text-align: center;
+}
+
+.pg-stat-num {
+  font: 900 15px/1.2 'Arial Black', Arial, sans-serif;
+  color: var(--gold);
+}
+
+.pg-stat-label {
+  font-size: 10px;
+  font-weight: normal;
+}
+
+.pg-next {
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border: 2.5px solid var(--ink);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #d58cff, #8a3ff0);
+}
+
+.pg-next-title {
+  font: 900 15px/1.2 'Arial Black', Arial, sans-serif;
+}
+
+.pg-next-sub {
+  font-size: 11px;
+  font-weight: normal;
+  margin-bottom: 4px;
+}
+
+.pg-ladder {
+  flex: 1;
+  min-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 4px;
+}
+
+.pg-row {
+  display: flex;
+  gap: 8px;
+  padding: 5px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  background: rgba(10, 30, 80, 0.45);
+}
+
+.pg-row.done {
+  opacity: 0.7;
+}
+
+.pg-row.current {
+  background: linear-gradient(180deg, #2f8cf0, #1d6ad0);
+  box-shadow: 0 0 0 2px var(--gold);
+}
+
+.pg-row.locked .chip-pic canvas {
+  filter: grayscale(1) brightness(0.8);
+}
+
+.pg-row-num {
+  flex: none;
+  width: 30px;
+  font: 900 18px/1.4 'Arial Black', Arial, sans-serif;
+  text-align: center;
+}
+
+.pg-row-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.pg-row-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.pg-row-title {
+  font-size: 13px;
+}
+
+.pg-row-xp {
+  font-size: 11px;
+  color: #cfe8ff;
+  white-space: nowrap;
+}
+
+.pg-row.done .pg-row-xp {
+  color: #b6ff8a;
+}
+
+.pg-row.current .pg-row-xp {
+  color: var(--gold);
+}
+
+.pg-none {
+  font-size: 11px;
+  font-weight: normal;
+  color: #cfe8ff;
+}
+
+.unlock-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.unlock-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px 1px 2px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.unlock-chip.k-cash { background: rgba(255, 210, 63, 0.25); }
+.unlock-chip.k-room { background: rgba(20, 184, 230, 0.3); }
+.unlock-chip.k-worker { background: rgba(0, 0, 0, 0.3); }
+.unlock-chip.k-celebrity { background: rgba(255, 210, 63, 0.35); }
+.unlock-chip.k-party { background: rgba(255, 61, 242, 0.3); }
+
+.chip-pic {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chip-pic canvas {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+.chip-icon,
+.chip-icon svg {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+}
+
+.lv-unlocks {
+  margin: 4px auto 10px;
+  max-width: 420px;
+}
+
+.lv-unlocks-title {
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.lv-unlocks .unlock-chips {
+  justify-content: center;
+}
+
+@media (max-width: 600px) {
+  .pg-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

@@ -42,10 +42,11 @@ Reference screenshots were downloaded for **visual reference only**. They are co
 | Guest card: portrait, name, speech-bubble quote, **Spent / Tip Rate / Happiness**, footer **"Regular"** | Built (quotes are our own lines) |
 | Dressing room: white panel, GENDER (2 silhouettes + **dice randomize**), SKIN COLOR swatches, centre preview, HEAD COLORS swatches, green OK, "Show it off!", bottom blue band with tabs (hair, face, lips, top, pants, shoes) and items labelled "Free" | Built, except face/lips tabs and "Show it off!" (a social feature) |
 | Build catalogue: blue curved bottom band, category icons, item row with prices, left/right arrows, tooltip "Name / Luxury: N", LUXURY badge, SAVE | Built (Done instead of SAVE; placement is instant) |
-| Workers panel: "Workers" tab with tuxedo icon, green OK, 3×2 cards: "Bar Tender" / "Bouncer" with "Switch to Bouncer/Bartender", locked slots **Level 9 / 13 / 17 / 21** | Built. Bouncer switch shown disabled (bouncers come later) |
-| Level-up: "YOU REACHED LEVEL 1!", glowing title **"Radiophonic Rookie"**, "**$500** more to spend!", "Congratulations! Your club's open for business!" | Built (SHARE omitted) |
+| Workers panel: "Workers" tab with tuxedo icon, green OK, 3×2 cards: "Bar Tender" / "Bouncer" with "Switch to Bouncer/Bartender", locked slots **Level 9 / 13 / 17 / 21** | Built, including the Bouncer switch |
+| Level-up: "YOU REACHED LEVEL 1!", glowing title **"Radiophonic Rookie"**, "**$500** more to spend!", "Congratulations! Your club's open for business!" | Built (SHARE omitted). Adds a "New for you" unlock list and a "What's next?" button (PROPOSED) |
+| Level / progress screen | No screenshot found; layout is PROPOSED (original). Worker slots at 17 and 21 imply at least 21 levels, so the curve now runs to 21 |
 | Tutorial: guide character with a speech bubble ("Welcome", Next) | Built with our own original guide character and text |
-| Celebrities panel: star tab, booked-celebrities counter, celebrity cards with Buy/Wish, levels | Not built. Dock star shows "later update" |
+| Celebrities panel: star tab, booked-celebrities counter, celebrity cards with Buy/Wish, levels | Built (Book instead of Buy/Wish; original fictional VIPs) |
 
 ## Club visuals (CONFIRMED by screenshots, re-drawn as original art)
 

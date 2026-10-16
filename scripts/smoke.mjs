@@ -179,6 +179,17 @@ try {
   await page.waitForTimeout(600);
   await page.screenshot({ path: `${SHOTS}/06d-party-club.png` });
 
+  // Progress screen: opens from the level badge, highlights the current level, shows what's next
+  await click('.level-badge');
+  const prog = await page.evaluate(() => {
+    const lvl = window.__ncr.game.state.level;
+    const cur = document.querySelector('.pg-row.current');
+    return { lvl, cur: cur?.getAttribute('data-level'), rows: document.querySelectorAll('.pg-row').length, next: !!document.querySelector('.pg-next .unlock-chip') };
+  });
+  check('Progress screen shows the ladder, current level and next unlocks', prog.cur === String(prog.lvl) && prog.rows >= 22 && prog.next, JSON.stringify(prog));
+  await page.screenshot({ path: `${SHOTS}/06e-progress.png` });
+  await page.click('.progress-panel .btn.corner');
+
   // Save -> reload -> compare. Freeze the simulation first: guests keep paying
   // cover/drinks, which would otherwise change state between snapshot and reload.
   await page.evaluate(() => {

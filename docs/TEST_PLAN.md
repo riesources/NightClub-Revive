@@ -37,6 +37,7 @@ npm run smoke       # needs a prior build; drives the real app in headless Chrom
 | Celebrities: booking rules, full visit (arrive/spend/leave/wall), no double payout after reload, v3→v4 migration, panel booking | `celebrities.test.ts`, smoke |
 | Bartender modes + drink tanks: capacity, refill cap, sell clamp, mode effects, Speed vs Tricks sim, v4→v5 migration, Workers toggle | `barModes.test.ts`, smoke |
 | Parties: start rules, cover multiplier, guest counting only while running, reward once on success, nothing on failure, settle once after reload, faster arrivals in the sim, v5→v6 migration, planner start + HUD pill | `parties.test.ts`, smoke |
+| Progress screen: ladder covers every level, every item/celebrity/party listed once, worker-slot levels reachable, $500 at level 1, room growth, next milestone; real-app open from the badge | `unlocks.test.ts`, smoke |
 | Tutorial stays dismissed after reload | smoke |
 | No console errors | smoke |
 

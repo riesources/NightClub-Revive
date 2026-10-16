@@ -55,6 +55,7 @@ The `dist/` folder is plain static files. You can host it on any static web host
 - **Drop Bass** sends everyone to the bar. **Dedicate Song** lets you click a guest to cheer them up.
 - **Decorate** (paint bucket): pick an item, then click a tile to buy it. `R` rotates, and `Esc` or right-click cancels. Click placed furniture to move or sell it.
 - **Party** (disco ball on the dock): pay to throw a party. Guests pour in while it runs; hit the guest goal shown under your cash to win the reward.
+- **Progress:** click your level badge or XP bar to see what you've unlocked and what's coming next.
 - Drag to pan, and scroll to zoom. Click any guest to see their card.
 
 Your club saves automatically in your browser. Use **Settings** (gear icon) to export, import or reset your save.
@@ -93,6 +94,8 @@ The game is written in **TypeScript** and runs in any modern web browser.
 - **Celebrities**: book original VIPs who visit, spend big, cheer up the crowd and go up on your celebrity wall.
 
 - **Bartender modes** (Tricks for bigger tips, Speed for faster service) and **Drink Tanks** that raise your drink limit.
+
+- **Progress screen**: click your level badge or XP bar to see your stats, what you've unlocked, and what each coming level brings.
 
 - **Parties**: throw a themed party for a rush of guests and sweeping party lights. Reach the guest goal before the timer ends to win cash and popularity.
 
