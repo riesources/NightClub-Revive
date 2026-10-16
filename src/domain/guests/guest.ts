@@ -95,6 +95,20 @@ export function moodOf(happiness: number, happyThreshold: number, unhappyThresho
   return 'neutral';
 }
 
+/**
+ * One-word mood for the guest card. The original showed words like
+ * "Enthusiastic" (S10); the scale and other words are PROPOSED.
+ */
+export function moodWord(g: Pick<Guest, 'state' | 'happiness'>): string {
+  if (g.state === 'TROUBLEMAKER') return 'Rowdy';
+  const h = g.happiness;
+  if (h >= 85) return 'Enthusiastic';
+  if (h >= 65) return 'Happy';
+  if (h >= 45) return 'Content';
+  if (h >= 25) return 'Bored';
+  return 'Upset';
+}
+
 export function guestCell(g: Guest): GridPoint {
   return { col: Math.floor(g.x), row: Math.floor(g.y) };
 }

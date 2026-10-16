@@ -18,7 +18,7 @@
 **Commands run and results**
 - `npx vitest run`: 98/98 passed (3 new or rewritten bouncer tests: walk-escort-return, waiting troublemaker doesn't time out or drain happiness, Send Bouncer busy/already-on-the-way).
 - `npm run build`: passes.
-- `node scripts/smoke.mjs`: see the PR (new check: in the real app a bouncer walks to a troublemaker and escorts them out).
+- `node scripts/smoke.mjs`: 23/23 passed (new check: in the real app a bouncer walks to a troublemaker and escorts them out).
 
 
 ## 2026-10-16 — Level / progress screen

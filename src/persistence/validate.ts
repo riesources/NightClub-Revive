@@ -2,6 +2,7 @@ import { isValidAppearance } from '../data/appearanceCatalog';
 import { getCelebrity } from '../data/celebrities';
 import { getParty } from '../data/parties';
 import { getFurnitureDef } from '../data/furnitureCatalog';
+import { cleanClubName } from '../domain/club';
 import { checkPlacement } from '../domain/grid';
 import { GENRES, SCHEMA_VERSION, type ClubState } from '../domain/types';
 
@@ -33,6 +34,8 @@ export function validateState(d: Record<string, unknown>): { ok: true; state: Cl
   const hist = d.partyHistory as Record<string, unknown>;
   if (!hist || typeof hist !== 'object' || Array.isArray(hist)) return bad('Invalid party history');
   for (const [k, v] of Object.entries(hist)) if (!getParty(k) || !isInt(v, 1)) return bad('Invalid party history entry');
+  if (typeof d.clubName !== 'string' || cleanClubName(d.clubName) !== d.clubName) return bad('Invalid club name');
+  if (!Array.isArray(d.celebWishes) || d.celebWishes.some((id) => typeof id !== 'string' || !getCelebrity(id)) || new Set(d.celebWishes).size !== d.celebWishes.length) return bad('Invalid celebrity wishes');
   if (!isNum(d.savedAt)) return bad('Invalid savedAt');
   const dj = d.dj as ClubState['dj'];
   if (!dj || !GENRES.includes(dj.genre) || !isTsOrNull(dj.setStartedAt) || !isTsOrNull(dj.setEndsAt) || !isTsOrNull(dj.lastDropBassAt) || !isTsOrNull(dj.lastDedicateAt))

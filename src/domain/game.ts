@@ -1,7 +1,8 @@
 import type { AvatarAppearance } from '../data/appearanceCatalog';
 import { isValidAppearance } from '../data/appearanceCatalog';
 import { refillDrinks } from './bar';
-import { clone } from './club';
+import { CLUB_NAME_MAX, clone, cleanClubName } from './club';
+import { getCelebrity } from '../data/celebrities';
 import * as dj from './dj';
 import { buyAndPlace, moveFurniture, sellFurniture } from './economy';
 import { GuestSimulation, type SimEvent, type SimHost } from './guests/simulation';
@@ -140,6 +141,19 @@ export class Game implements SimHost {
     const draft = clone(this._state);
     draft.appearance = { ...a };
     return this.apply({ ok: true, state: draft }, 'Look saved');
+  }
+  renameClub(name: string) {
+    const n = cleanClubName(name);
+    if (!n) return this.apply({ ok: false, reason: `Club names are 1 to ${CLUB_NAME_MAX} characters` });
+    const draft = clone(this._state);
+    draft.clubName = n;
+    return this.apply({ ok: true, state: draft });
+  }
+  toggleCelebWish(celebId: string) {
+    if (!getCelebrity(celebId)) return this.apply({ ok: false, reason: 'Unknown celebrity' });
+    const draft = clone(this._state);
+    draft.celebWishes = draft.celebWishes.includes(celebId) ? draft.celebWishes.filter((x) => x !== celebId) : [...draft.celebWishes, celebId];
+    return this.apply({ ok: true, state: draft });
   }
   dismissTutorial() {
     const draft = clone(this._state);
