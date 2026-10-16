@@ -621,7 +621,8 @@ export class UI {
     const s = this.game.state;
     const cats = Object.keys(CATEGORY_LABELS) as FurnitureCategory[];
     const items = h('div', { class: 'items' });
-    for (const f of FURNITURE.filter((x) => x.category === this.buildCategory)) {
+    const inCategory = FURNITURE.filter((x) => x.category === this.buildCategory).sort((a, b) => a.requiredLevel - b.requiredLevel || a.price - b.price);
+    for (const f of inCategory) {
       const locked = s.level < f.requiredLevel;
       const poor = s.cash < f.price;
       const selected = this.ix.mode.kind === 'place' && this.ix.mode.catalogId === f.id;

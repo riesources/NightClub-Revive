@@ -54,6 +54,38 @@ function faces(col: number, row: number, w: number, h: number, z0: number, heigh
   };
 }
 
+function drawBooth(g: G, def: FurnitureDef, col: number, row: number, w: number, h: number, cfg: IsoConfig, A: number, pulse: number, z0: number, top: number, side: number): void {
+  const H = def.art.height;
+  const upZ = (p: Pt, z: number): Pt => ({ x: p.x, y: p.y - z });
+  drawPrism(g, col, row, w, h, z0, H, top, side, cfg, A);
+  const f = faces(col, row, w, h, z0, H, cfg);
+  // neon strip across both front faces
+  g.lineStyle(2.5, def.art.glow ?? 0x00e5ff, (0.6 + 0.4 * pulse) * A);
+  g.lineBetween(f.left(0, 0.55).x, f.left(0, 0.55).y, f.left(1, 0.55).x, f.left(1, 0.55).y);
+  g.lineBetween(f.right(0, 0.55).x, f.right(0, 0.55).y, f.right(1, 0.55).x, f.right(1, 0.55).y);
+  // mixer in the middle, turntables either side
+  const along = w >= h;
+  const at = (t: number) => upZ(gridToScreen(col + (along ? w * t : w / 2), row + (along ? h / 2 : h * t), cfg), z0);
+  for (const t of [0.22, 0.78]) {
+    const p = at(t);
+    g.fillStyle(0xc8ced8, A);
+    g.fillEllipse(p.x, p.y - H - 1, 22, 12);
+    g.fillStyle(0x111114, A);
+    g.fillEllipse(p.x, p.y - H - 2, 17, 9);
+    g.fillStyle(def.art.glow ?? 0x00e5ff, (0.5 + 0.5 * pulse) * A);
+    g.fillEllipse(p.x, p.y - H - 2, 5, 2.6);
+  }
+  const m = at(0.5);
+  g.fillStyle(0x9aa2b0, A);
+  g.fillRect(m.x - 7, m.y - H - 7, 14, 7);
+  g.fillStyle(0x1b1d22, A);
+  g.fillRect(m.x - 6, m.y - H - 6, 12, 2);
+  for (let k = 0; k < 4; k++) {
+    g.fillStyle([0xff3d3d, 0x3ddc84, 0xffd23f, 0x00e5ff][k], A);
+    g.fillRect(m.x - 5 + k * 3, m.y - H - 3, 1.6, 1.6);
+  }
+}
+
 export function drawFurniture(g: G, def: FurnitureDef, col: number, row: number, w: number, h: number, cfg: IsoConfig, opts: DrawOpts = {}): void {
   const A = opts.alpha ?? 1;
   const top = opts.tint ?? def.art.top;
@@ -105,33 +137,16 @@ export function drawFurniture(g: G, def: FurnitureDef, col: number, row: number,
       break;
     }
     case 'djbooth': {
-      drawPrism(g, col, row, w, h, 0, H, top, side, cfg, A);
-      const f = faces(col, row, w, h, 0, H, cfg);
-      // neon strip across both front faces
-      g.lineStyle(2.5, def.art.glow ?? 0x00e5ff, (0.6 + 0.4 * pulse) * A);
-      g.lineBetween(f.left(0, 0.55).x, f.left(0, 0.55).y, f.left(1, 0.55).x, f.left(1, 0.55).y);
-      g.lineBetween(f.right(0, 0.55).x, f.right(0, 0.55).y, f.right(1, 0.55).x, f.right(1, 0.55).y);
-      // mixer in the middle, turntables either side
-      const along = w >= h;
-      const at = (t: number) => gridToScreen(col + (along ? w * t : w / 2), row + (along ? h / 2 : h * t), cfg);
-      for (const t of [0.22, 0.78]) {
-        const p = at(t);
-        g.fillStyle(0xc8ced8, A);
-        g.fillEllipse(p.x, p.y - H - 1, 22, 12);
-        g.fillStyle(0x111114, A);
-        g.fillEllipse(p.x, p.y - H - 2, 17, 9);
-        g.fillStyle(def.art.glow ?? 0x00e5ff, (0.5 + 0.5 * pulse) * A);
-        g.fillEllipse(p.x, p.y - H - 2, 5, 2.6);
-      }
-      const m = at(0.5);
-      g.fillStyle(0x9aa2b0, A);
-      g.fillRect(m.x - 7, m.y - H - 7, 14, 7);
-      g.fillStyle(0x1b1d22, A);
-      g.fillRect(m.x - 6, m.y - H - 6, 12, 2);
-      for (let k = 0; k < 4; k++) {
-        g.fillStyle([0xff3d3d, 0x3ddc84, 0xffd23f, 0x00e5ff][k], A);
-        g.fillRect(m.x - 5 + k * 3, m.y - H - 3, 1.6, 1.6);
-      }
+      drawBooth(g, def, col, row, w, h, cfg, A, pulse, 0, top, side);
+      break;
+    }
+    case 'podium': {
+      // raised stage with a glowing lip, booth on top (S10 podium booths)
+      drawPrism(g, col - 0.08, row - 0.08, w + 0.16, h + 0.16, 0, 12, 0x3a3d47, 0x1d1f26, cfg, A);
+      const lip = corners(col - 0.08, row - 0.08, w + 0.16, h + 0.16, cfg).map((p) => up(p, 12));
+      g.lineStyle(2, def.art.glow ?? 0x7df9ff, (0.5 + 0.5 * pulse) * A);
+      g.strokePoints(lip, true);
+      drawBooth(g, def, col, row, w, h, cfg, A, pulse, 12, top, side);
       break;
     }
     case 'bar': {
@@ -266,6 +281,193 @@ export function drawFurniture(g: G, def: FurnitureDef, col: number, row: number,
       g.fillCircle(centre.x, centre.y - H - 4, 10 + pulse * 6);
       g.fillStyle(0xffffff, 0.6 * A);
       g.fillCircle(centre.x, centre.y - H - 4, 3);
+      break;
+    }
+    case 'diamondtile': {
+      // white light tile with an orange diamond inlay (S10 patterned floors)
+      drawPrism(g, col, row, w, h, 0, H, shade(top, 0.85), side, cfg, A);
+      const T = corners(col, row, w, h, cfg).map((p) => up(p, H));
+      g.fillStyle(top, A);
+      g.fillPoints(corners(col + 0.04, row + 0.04, w - 0.08, h - 0.08, cfg).map((p) => up(p, H)), true);
+      const mid = (p: Pt, q: Pt) => lerp(p, q, 0.5);
+      const glow = def.art.glow ?? 0xff9a2e;
+      g.fillStyle(glow, (0.55 + 0.45 * pulse) * A);
+      g.fillPoints([mid(T[0], T[1]), mid(T[1], T[2]), mid(T[2], T[3]), mid(T[3], T[0])], true);
+      g.fillStyle(shade(glow, 1.5), (0.4 + 0.5 * pulse) * A);
+      g.fillPoints(corners(col + 0.38, row + 0.38, w - 0.76, h - 0.76, cfg).map((p) => up(p, H)), true);
+      g.lineStyle(1, shade(side, 0.8), 0.8 * A);
+      g.strokePoints(T, true);
+      break;
+    }
+    case 'rope': {
+      // two chrome stanchions with a sagging red velvet rope
+      const along = w >= h;
+      const at = (t: number) => gridToScreen(col + (along ? w * t : w / 2), row + (along ? h / 2 : h * t), cfg);
+      const posts = [at(0.2), at(0.8)];
+      g.lineStyle(3, def.art.glow ?? 0xc0102a, A);
+      const p0 = up(posts[0], H - 4);
+      const p1 = up(posts[1], H - 4);
+      const sag = { x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2 + 9 };
+      const curve: Pt[] = [];
+      for (let k = 0; k <= 10; k++) {
+        const t = k / 10;
+        curve.push({ x: (1 - t) ** 2 * p0.x + 2 * (1 - t) * t * sag.x + t * t * p1.x, y: (1 - t) ** 2 * p0.y + 2 * (1 - t) * t * sag.y + t * t * p1.y });
+      }
+      g.strokePoints(curve, false);
+      for (const p of posts) {
+        g.fillStyle(0x000000, 0.25 * A);
+        g.fillEllipse(p.x, p.y, 16, 7);
+        g.fillStyle(side, A);
+        g.fillEllipse(p.x, p.y - 1, 13, 6);
+        g.fillStyle(top, A);
+        g.fillRect(p.x - 2, p.y - H, 4, H);
+        g.fillStyle(0xffffff, 0.7 * A);
+        g.fillRect(p.x - 1, p.y - H, 1, H);
+        g.fillStyle(0xffd23f, A);
+        g.fillCircle(p.x, p.y - H - 2, 3.5);
+      }
+      break;
+    }
+    case 'statue': {
+      // gold dancer on a marble plinth, arms raised
+      drawPrism(g, col + 0.22, row + 0.22, 0.56, 0.56, 0, 12, 0xf2f2f2, 0xc8ccd4, cfg, A);
+      const b = up(centre, 12);
+      const sway = (pulse - 0.5) * 2;
+      g.fillStyle(side, A);
+      g.fillPoints([{ x: b.x - 5, y: b.y }, { x: b.x - 1, y: b.y - 16 }, { x: b.x + 1, y: b.y - 16 }, { x: b.x + 6, y: b.y }], true);
+      g.fillStyle(top, A);
+      g.fillPoints([{ x: b.x - 5, y: b.y - 15 }, { x: b.x + 5, y: b.y - 15 }, { x: b.x + 4, y: b.y - 28 }, { x: b.x - 4, y: b.y - 28 }], true);
+      g.lineStyle(3, top, A);
+      g.lineBetween(b.x - 4, b.y - 27, b.x - 9 + sway, b.y - 38);
+      g.lineBetween(b.x + 4, b.y - 27, b.x + 8 + sway, b.y - 36);
+      g.fillCircle(b.x, b.y - 33, 5);
+      g.fillStyle(0xffffff, 0.55 * A);
+      g.fillRect(b.x - 3, b.y - 26, 1.5, 9);
+      g.fillCircle(b.x - 2, b.y - 35, 1.5);
+      break;
+    }
+    case 'gogo': {
+      // glass tube on a lit base with a dancer inside (S10)
+      const r = 13;
+      const base = 8;
+      const tubeH = H - base - 6;
+      g.fillStyle(0x000000, 0.3 * A);
+      g.fillEllipse(centre.x, centre.y, 36, 16);
+      g.fillStyle(side, A);
+      g.fillRect(centre.x - r - 3, centre.y - base, (r + 3) * 2, base);
+      g.fillEllipse(centre.x, centre.y, (r + 3) * 2, 12);
+      g.fillStyle(def.art.glow ?? 0x00e5ff, (0.5 + 0.5 * pulse) * A);
+      g.fillEllipse(centre.x, centre.y - base, (r + 3) * 2, 12);
+      const fb = { x: centre.x, y: centre.y - base };
+      const sw = (pulse - 0.5) * 4;
+      g.fillStyle(0x8a5a3c, A);
+      g.lineStyle(2.5, 0x8a5a3c, A);
+      g.lineBetween(fb.x - 2, fb.y - 2, fb.x - 3 - sw, fb.y - 14);
+      g.lineBetween(fb.x + 2, fb.y - 2, fb.x + 3 - sw, fb.y - 14);
+      g.fillStyle(0xff3df2, A);
+      g.fillRect(fb.x - 5 + sw * 0.5, fb.y - 26, 10, 13);
+      g.lineStyle(2, 0x8a5a3c, A);
+      g.lineBetween(fb.x - 4 + sw * 0.5, fb.y - 24, fb.x - 9 + sw, fb.y - 34);
+      g.lineBetween(fb.x + 4 + sw * 0.5, fb.y - 24, fb.x + 9 + sw, fb.y - 33);
+      g.fillCircle(fb.x + sw * 0.5, fb.y - 31, 4.5);
+      g.fillStyle(0x1b1b1b, A);
+      g.fillEllipse(fb.x + sw * 0.5, fb.y - 34, 10, 6);
+      g.fillStyle(top, 0.22 * A);
+      g.fillRect(centre.x - r, centre.y - base - tubeH, r * 2, tubeH);
+      g.fillStyle(0xffffff, 0.45 * A);
+      g.fillRect(centre.x - r + 3, centre.y - base - tubeH + 4, 2.5, tubeH - 8);
+      g.fillRect(centre.x + r - 6, centre.y - base - tubeH + 6, 1.5, tubeH - 14);
+      g.lineStyle(1.2, shade(top, 0.7), 0.9 * A);
+      g.lineBetween(centre.x - r, centre.y - base, centre.x - r, centre.y - base - tubeH);
+      g.lineBetween(centre.x + r, centre.y - base, centre.x + r, centre.y - base - tubeH);
+      g.fillStyle(side, A);
+      g.fillEllipse(centre.x, centre.y - base - tubeH, (r + 2) * 2, 10);
+      g.fillStyle(def.art.glow ?? 0x00e5ff, (0.4 + 0.6 * pulse) * A);
+      g.fillEllipse(centre.x, centre.y - base - tubeH + 1, r * 2 - 4, 5);
+      break;
+    }
+    case 'aquarium': {
+      // tall glass tank with swimming fish (S10 aquarium wall)
+      drawPrism(g, col + 0.1, row + 0.3, w - 0.2, h - 0.6, 0, 8, side, shade(side, 0.8), cfg, A);
+      const f = faces(col + 0.1, row + 0.3, w - 0.2, h - 0.6, 8, H - 12, cfg);
+      const face = (u0: number, u1: number, v0: number, v1: number, which: 'left' | 'right') => [f[which](u0, v0), f[which](u1, v0), f[which](u1, v1), f[which](u0, v1)];
+      g.fillStyle(top, 0.85 * A);
+      g.fillPoints(face(0, 1, 0, 1, 'left'), true);
+      g.fillStyle(shade(top, 0.8), 0.85 * A);
+      g.fillPoints(face(0, 1, 0, 1, 'right'), true);
+      const t = Date.now() / 1000;
+      const fish: [number, number, number][] = [[0.15, 0.7, 0xff8a00], [0.55, 0.45, 0xffd23f], [0.3, 0.25, 0xff3df2], [0.75, 0.62, 0x7df9ff]];
+      fish.forEach(([u, v, c], i) => {
+        const uu = (u + ((t * (0.05 + i * 0.015)) % 1)) % 1;
+        const p = f.left(0.08 + uu * 0.84, v);
+        g.fillStyle(c, A);
+        g.fillEllipse(p.x, p.y, 7, 4);
+        g.fillTriangle(p.x - 3.5, p.y, p.x - 7, p.y - 2.5, p.x - 7, p.y + 2.5);
+      });
+      g.fillStyle(0x2fa84f, 0.9 * A);
+      for (const u of [0.1, 0.42, 0.85]) {
+        const p = f.left(u, 0);
+        g.fillTriangle(p.x - 3, p.y, p.x + 3, p.y, p.x, p.y - 14);
+      }
+      g.fillStyle(0xffffff, 0.3 * A);
+      g.fillPoints(face(0.05, 0.12, 0.1, 0.9, 'left'), true);
+      g.fillStyle(def.art.glow ?? 0x7df9ff, (0.25 + 0.3 * pulse) * A);
+      g.fillPoints(face(0, 1, 0.9, 1, 'left'), true);
+      g.lineStyle(2, side, A);
+      g.strokePoints(face(0, 1, 0, 1, 'left'), true);
+      g.strokePoints(face(0, 1, 0, 1, 'right'), true);
+      break;
+    }
+    case 'fountain': {
+      // stone pool, rippling water, floating rose petals, centre spout (S10)
+      drawPrism(g, col + 0.05, row + 0.05, w - 0.1, h - 0.1, 0, H, side, shade(side, 0.75), cfg, A);
+      const water = corners(col + 0.2, row + 0.2, w - 0.4, h - 0.4, cfg).map((p) => up(p, H));
+      g.fillStyle(top, A);
+      g.fillPoints(water, true);
+      const t = Date.now() / 1000;
+      g.lineStyle(1, 0xffffff, 0.5 * A);
+      for (let k = 0; k < 3; k++) {
+        const ph = (t * 0.6 + k / 3) % 1;
+        g.strokeEllipse(centre.x, centre.y - H, 14 + ph * 40, (14 + ph * 40) / 2);
+      }
+      g.fillStyle(def.art.glow ?? 0xe0102a, A);
+      for (const [u, v] of [[0.3, 0.35], [0.65, 0.3], [0.4, 0.7], [0.72, 0.62], [0.25, 0.55], [0.55, 0.8]] as const) {
+        const p = up(gridToScreen(col + w * u, row + h * v, cfg), H);
+        g.fillEllipse(p.x + Math.sin(t + u * 9) * 1.5, p.y, 5, 3);
+      }
+      g.fillStyle(0xf2f2f2, A);
+      g.fillRect(centre.x - 3, centre.y - H - 14, 6, 14);
+      g.fillStyle(0xbff6ff, (0.6 + 0.4 * pulse) * A);
+      g.fillEllipse(centre.x, centre.y - H - 18, 10 + pulse * 4, 6);
+      break;
+    }
+    case 'buddha': {
+      // seated, round, gold, on a red cushion (S10)
+      g.fillStyle(0x000000, 0.25 * A);
+      g.fillEllipse(centre.x, centre.y, 40, 17);
+      g.fillStyle(0xc0102a, A);
+      g.fillEllipse(centre.x, centre.y - 4, 38, 15);
+      g.fillStyle(0x8a0a1d, A);
+      g.fillRect(centre.x - 19, centre.y - 4, 38, 4);
+      const b = { x: centre.x, y: centre.y - 8 };
+      g.fillStyle(side, A);
+      g.fillEllipse(b.x, b.y - 3, 34, 14);
+      g.fillStyle(top, A);
+      g.fillEllipse(b.x, b.y - 15, 28, 26);
+      g.fillStyle(shade(top, 1.15), A);
+      g.fillEllipse(b.x, b.y - 12, 14, 12);
+      g.fillStyle(top, A);
+      g.fillCircle(b.x, b.y - 33, 9);
+      g.fillStyle(side, A);
+      g.fillCircle(b.x - 9, b.y - 31, 3);
+      g.fillCircle(b.x + 9, b.y - 31, 3);
+      g.lineStyle(1.4, side, A);
+      g.lineBetween(b.x - 4, b.y - 34, b.x - 1.5, b.y - 34);
+      g.lineBetween(b.x + 1.5, b.y - 34, b.x + 4, b.y - 34);
+      g.strokeEllipse(b.x, b.y - 29, 5, 2);
+      g.fillStyle(0xffffff, 0.5 * A);
+      g.fillCircle(b.x - 4, b.y - 37, 2);
+      g.fillEllipse(b.x - 7, b.y - 20, 4, 8);
       break;
     }
   }

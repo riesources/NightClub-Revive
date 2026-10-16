@@ -530,10 +530,19 @@ export class ClubScene extends Phaser.Scene {
   private drawDj(state: ClubState, now: number, playing: boolean): void {
     const g = this.djAvatar;
     g.clear();
-    const booth = state.furniture.find((f) => getFurnitureDef(f.catalogId)?.kind === 'dj');
+    // Stand at the best booth (the one that sets the set length); podiums lift the DJ up.
+    let booth: (typeof state.furniture)[number] | undefined;
+    for (const f of state.furniture) {
+      const d = getFurnitureDef(f.catalogId);
+      if (d?.kind !== 'dj') continue;
+      const cur = booth ? (getFurnitureDef(booth.catalogId)?.djSetMs ?? 0) : -1;
+      if ((d.djSetMs ?? 0) > cur) booth = f;
+    }
     if (!booth) return;
     const { w, h } = footprintSize(booth.catalogId, booth.facing);
-    const back = booth.facing === 0 ? gridToScreen(booth.col + w / 2, booth.row + 0.05, this.cfg) : gridToScreen(booth.col + 0.05, booth.row + h / 2, this.cfg);
+    const lift = getFurnitureDef(booth.catalogId)?.art.style === 'podium' ? 12 : 0;
+    const base = booth.facing === 0 ? gridToScreen(booth.col + w / 2, booth.row + 0.05, this.cfg) : gridToScreen(booth.col + 0.05, booth.row + h / 2, this.cfg);
+    const back = { x: base.x, y: base.y - lift };
     g.setDepth((depthFor(booth.col, booth.row, w, h) - 1) * 100 - 1);
     if (playing) {
       // blue spotlight ring around the DJ, as in the reference screenshots

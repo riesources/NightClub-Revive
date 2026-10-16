@@ -11,8 +11,8 @@ The layout, characters, furniture and interface are modelled closely on historic
 | ![DJ card](docs/screenshots/dj.png) | ![Guest card](docs/screenshots/guest.png) | ![Build mode](docs/screenshots/build.png) |
 | **Dressing room** | **Workers** | **Parties** |
 | ![Dressing room](docs/screenshots/dress.png) | ![Workers panel](docs/screenshots/workers.png) | ![Party planner](docs/screenshots/party.png) |
-| **Progress** | | |
-| ![Progress screen](docs/screenshots/progress.png) | | |
+| **Progress** | **Furniture pack** | |
+| ![Progress screen](docs/screenshots/progress.png) | ![Furniture pack](docs/screenshots/furniture.png) | |
 
 ## Play online
 
@@ -52,11 +52,12 @@ The `dist/` folder is plain static files. You can host it on any static web host
 
 ### How to play
 
-- **Start the music:** click the record button (top left) or the **DJ** icon on the dock, then **Refresh Set** and pick a mix. Click once anywhere first if your browser blocks sound.
+- **Start the music:** click **Start** in the now-playing box (top left), the record button, or the **DJ** icon on the dock, then pick a mix. Click once anywhere first if your browser blocks sound.
 - **Guests** pay a cover charge at the door, dance and buy drinks. Keep the **drink tube** (right) stocked: click **+** to restock.
 - **Drop Bass** sends everyone to the bar. **Dedicate Song** lets you click a guest to cheer them up.
 - **Decorate** (paint bucket): pick an item, then click a tile to buy it. `R` rotates, and `Esc` or right-click cancels. Click placed furniture to move or sell it.
-- **Party** (disco ball on the dock): pay to throw a party. Guests pour in while it runs; hit the guest goal shown under your cash to win the reward.
+- **THROW A PARTY!** (top right): pay to throw a party. Guests pour in while it runs; hit the guest goal shown on the button to win the reward.
+- **Club name:** click it (top right) to rename your club.
 - **Progress:** click your level badge or XP bar to see what you've unlocked and what's coming next.
 - Drag to pan, and scroll to zoom. Click any guest to see their card.
 
@@ -99,7 +100,7 @@ The game is written in **TypeScript** and runs in any modern web browser.
 
 - **Progress screen**: click your level badge or XP bar to see your stats, what you've unlocked, and what each coming level brings.
 
-- **Parties**: throw a themed party for a rush of guests and sweeping party lights. Reach the guest goal before the timer ends to win cash and popularity.
+- **Parties**: hit **THROW A PARTY!** (top right) for a rush of guests and sweeping party lights. Reach the guest goal before the timer ends to win cash and popularity.
 
 Not built yet: neighbors/friends bar. See [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md).
 

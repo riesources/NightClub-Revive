@@ -38,6 +38,8 @@ npm run smoke       # needs a prior build; drives the real app in headless Chrom
 | Bartender modes + drink tanks: capacity, refill cap, sell clamp, mode effects, Speed vs Tricks sim, v4→v5 migration, Workers toggle | `barModes.test.ts`, smoke |
 | Parties: start rules, cover multiplier, guest counting only while running, reward once on success, nothing on failure, settle once after reload, faster arrivals in the sim, v5→v6 migration, planner start + HUD pill | `parties.test.ts`, smoke |
 | Progress screen: ladder covers every level, every item/celebrity/party listed once, worker-slot levels reachable, $500 at level 1, room growth, next milestone; real-app open from the badge | `unlocks.test.ts`, smoke |
+| Interface (S10): club name rules + rename, wishes, mood words, v6→v7 migration, party CTA, guest card parts, "Ends:" time | `interface.test.ts`, smoke |
+| Furniture catalogue: unique ids, walkable rules, every item draws, video pack places and blocks | `catalogue.test.ts` |
 | Tutorial stays dismissed after reload | smoke |
 | No console errors | smoke |
 

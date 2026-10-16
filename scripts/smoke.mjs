@@ -94,7 +94,13 @@ try {
     window.__ncr.ix.select({ kind: 'guest', id: g.id });
   });
   await page.waitForTimeout(400);
-  check('guest card shows spent / tip rate / happiness', (await page.locator('.card-guest .stats').textContent())?.includes('Tip Rate') === true);
+  const gc = await page.evaluate(() => ({
+    type: document.querySelector('.card-guest .guest-type')?.textContent ?? '',
+    mood: document.querySelector('.card-guest .mood-word')?.textContent ?? '',
+    stats: document.querySelectorAll('.card-guest .gstat').length,
+    spent: document.querySelector('.card-guest .stats')?.textContent ?? '',
+  }));
+  check('guest card shows type, mood word, stat icons and spent', gc.type.length > 0 && gc.mood.length > 0 && gc.stats === 3 && gc.spent.includes('Spent'), JSON.stringify(gc));
   await page.keyboard.press('Escape');
 
   await click('.dock-btn[data-id="build"]');
