@@ -33,7 +33,7 @@ Source: frames from the gameplay video S10 (see `EVIDENCE_REGISTER.md`).
 **Commands run and results**
 - `npx vitest run`: 106/106 passed (8 new: club name, wishes, mood words, v6→v7 migration/validation, catalogue sanity, every item draws finite shapes, the pack places and blocks correctly).
 - `npm run build`: passes.
-- `node scripts/smoke.mjs`: see the PR.
+- `node scripts/smoke.mjs`: 24/24 passed (new or updated checks: THROW A PARTY!, guest card parts, club rename + Wish + "Ends:" time).
 - Real-app screenshots reviewed: new HUD, guest card, celebrity cards, party countdown, renamed club, all new furniture in a club and in the build menu.
 
 
