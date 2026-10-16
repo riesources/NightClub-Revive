@@ -12,7 +12,7 @@ Read `Nightclub_City_Reconstruction_Blueprint.md` in full before implementing. T
 ## Non-negotiable principles
 
 1. **Research and inspect first.** Review the historical sources listed in the blueprint. If you can browse the web, verify their contents and search the linked Nightclub City preservation thread. If not, record this limitation.
-2. **Evidence labels are mandatory.** Mark findings as `CONFIRMED`, `INFERRED`, `PROPOSED`, or `UNVERIFIED`. Never invent exact prices, formulas, timers, animation timings, or dimensions and present them as historical facts.
+2. **Evidence labels are mandatory.** Mark findings as `CONFIRMED` (screenshot or 2+ sources), `SOURCED (1)`, `INFERRED`, `PROPOSED`, or `UNVERIFIED`, always with the source URL. Never invent exact prices, formulas, timers, animation timings, or dimensions and present them as historical facts.
 3. **Target is the Facebook/browser Flash-era game.** Rebuild a standalone modern browser experience. No Roblox, no generic 3D game, and no wholesale redesign into a modern dashboard.
 4. **User has no files.** Do not keep asking for originals. Work from public material. Continue seeking recovery leads, but don't block implementation while waiting for files.
 5. **Faithful but responsible assets.** Use lawfully usable original assets only if you confirm their provenance and permission. Otherwise create coherent replacement artwork with the same broad isometric cartoon/nightclub visual language; do not copy proprietary sprites or use copyrighted commercial recordings without permission. Do not distribute copyrighted game binaries.
@@ -37,7 +37,7 @@ Read `Nightclub_City_Reconstruction_Blueprint.md` in full before implementing. T
 - https://archive.org/download/swf-flash-games
 - https://flashpointarchive.org/search?advanced=true
 
-A preservation post dated 24 September 2026 reports a recovered later official client and substantial source/data running offline, while the original Facebook Flash client is still missing. Known historical loader names include `NightclubMogulLoader_223.swf`, `_367.swf`, `_392.swf`, `_422.swf`, `_455.swf`, and later paths like `/nlc/static/club/swf/v687/NightclubMogulLoader.swf`. Treat this only as a lead: ask the poster politely whether access/collaboration is possible; do not imply a public download exists.
+A preservation post dated 24 September 2026 reports a recovered later official client and substantial source/data running offline, while the original Facebook Flash client is still missing. Known historical loader names include `NightclubMogulLoader_223.swf`, `_367.swf`, `_392.swf`, `_422.swf`, `_455.swf`, and later paths like `/nlc/static/club/swf/v687/NightclubMogulLoader.swf`. Treat this only as a lead; do not imply a public download exists. Outreach to the poster is a **human task** for the project owner — an agent cannot post on Reddit.
 
 ## Required working sequence
 
@@ -73,9 +73,11 @@ Implement in this order:
 5. The HUD showing cash, popularity, luxury, level/progress, DJ status and bar stock.
 6. NPC guests with a basic state machine, pathfinding, dance-floor behavior and safe exit/fallback behavior.
 7. Bar, drink stock, queue/service, purchases, tips and bartender assignment.
-8. DJ genre selection, timer, refresh/restart, “Drop the Bass” and “Dedicate Song” actions. Historical guides describe a 15-minute starter set and refills of 100 drinks; treat these as evidence-backed baselines while keeping them configurable. The exact effects, prices and formulas must remain tuneable if unknown.
+8. DJ genre selection, timer, refresh/restart, “Drop the Bass” and “Dedicate Song” actions. Historical guides describe a 15-minute starter set duration and refills of 100 drinks; treat these as evidence-backed baselines while keeping them configurable. Genres: club mix, hip-hop, electronic, pop (GameYum). The action names "Drop the Bass" and "Dedicate Song" come from GameYum; Dedicate Song can target any guest (Gamezebo). The exact effects, prices and formulas must remain tuneable if unknown.
 9. Local saving/reloading with schema versioning and safe recovery on invalid saves.
-10. Avatar editor foundation using modular placeholder/replacement art.
+10. Avatar editor foundation using modular placeholder/replacement art (minimal in P0; full wardrobe is P1 per the blueprint).
+
+P0 is large: gate it as **P0a** (items 1–5 and 9) then **P0b** (items 6–8, 10). Before item 1, record two decisions in `docs/DECISIONS.md`: the **away-time rule** (blueprint §7.3a) and the **art-production method** (blueprint §9).
 
 Deliver a working playable slice before expanding into secondary features.
 

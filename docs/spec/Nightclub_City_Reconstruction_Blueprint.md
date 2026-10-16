@@ -21,7 +21,7 @@ The first deliverable is a **single-player playable vertical slice**. It must le
 ### The reconstruction contract
 
 1. Research before assumption: inspect source links and screenshots before deciding details.
-2. Label evidence: use `CONFIRMED`, `INFERRED`, or `PROPOSED` in the project documentation and data comments.
+2. Label evidence: use `CONFIRMED`, `INFERRED`, `PROPOSED`, or `UNVERIFIED` in the project documentation and data comments.
 3. Prefer fidelity over novelty: do not introduce unrelated tycoon mechanics, battle passes, pets, crafting, or Roblox-style systems.
 4. When evidence is missing, use configurable values and document the uncertainty instead of presenting guesses as original facts.
 5. Build with original replacement art unless the original assets are recovered and there is permission to use them. Do not use unlicensed commercial songs.
@@ -34,7 +34,8 @@ The first deliverable is a **single-player playable vertical slice**. It must le
 
 Use this legend in all design notes and implementation decisions:
 
-- **CONFIRMED:** Supported by a historical walkthrough, review, screenshot, or preservation post.
+- **CONFIRMED:** Supported by a historical screenshot, or by two or more independent written sources. Always cite the source URL(s).
+- **SOURCED (1):** Stated by exactly one written source. Usable, but cite it and seek a second source.
 - **INFERRED:** Strongly suggested by multiple images or descriptions, but a detail such as an exact formula, animation timing, or layout coordinate is unknown.
 - **PROPOSED:** A practical implementation choice used to make the reconstruction playable. It must be configurable and should be revised if better evidence appears.
 - **UNVERIFIED:** A claim or feature that has not yet been supported by a source.
@@ -72,6 +73,15 @@ Do not confuse `CONFIRMED feature exists` with `CONFIRMED exact implementation`.
 
 10. **Historical general review** — https://myfbapplication.blogspot.com/2010/07/nightclub-city.html  
     Describes a fifteen-minute music mix and selectable broad genres, including electronic, hip-hop and pop. Cross-check against other guides.
+
+### Audit notes on sources (verified 16 Oct 2026)
+
+- Gamezebo describes the speaker icon ("drop the bass and make your guests go to the bar") and the microphone icon ("targets any guest to increase its happiness level") but does **not** use the names "Drop the Bass" or "Dedicate Song"; those names come from the **GameYum** guide.
+- Gamezebo's phrasing "lets you play your set every 15 minutes" is ambiguous (duration vs. frequency); myfbapplication states the mix "plays for fifteen minutes". Treat 15 min as **set duration**.
+- GameYum lists four genres: **club mix**, hip hop, electronica, pop.
+- GameYum describes mechanics this spec previously omitted: bartender **modes** (tricks for bigger tips / speed for double-speed service), a **premium currency** (Facebook Credits) for high-end decor, **automatic club expansion on level-up** with paid upgrades at higher levels, and extra **drink tanks** / bar upgrades raising capacity.
+- Celebrity names in the original were parodies of real people (e.g. "Shuck Norris", "Simon Scowl"). Use fully original names; do not imitate real people.
+- The Reddit preservation thread and MobyGames could not be fetched from the audit environment; their contents remain **UNVERIFIED** here.
 
 ### Preservation search tasks
 
@@ -210,7 +220,12 @@ Create a screenshot/evidence sheet for every screen before declaring it complete
 - Show affordability feedback and locked-item reason.
 - Implement popularity and luxury as distinct values because both appear in original UI/references. Document their different effects. Avoid pretending their exact formulas are known.
 - Level progression should be represented by a configurable XP/earnings curve. The original exact formula is not proven here. Store total earnings separately from current cash.
-- Club expansion and item unlocks should have table-driven requirements. Avoid selecting arbitrary historical levels as facts until a source verifies them.
+- Club expansion and item unlocks should have table-driven requirements. GameYum confirms the club **expands automatically on level-up**, with paid upgrades at higher levels. Avoid selecting arbitrary historical levels as facts until a source verifies them.
+- The original had a premium currency (Facebook Credits) for high-end decor. Decide explicitly how a local build replaces it (e.g. an earn-only premium currency, or none) and record it in `DECISIONS.md`.
+
+### 7.3a Away-time rule — P0
+
+Define what happens while the player is away; timers and saves depend on it. Until evidence says otherwise (PROPOSED): DJ sets run on absolute timestamps and simply end; no guests or income are simulated while the tab is closed or hidden; on return the club reopens with no guests and music off if the set expired.
 - Include a developer reset and a test fixture with known cash/level so QA can cover progression deterministically.
 
 ### 7.4 Guests and needs — P0
@@ -253,18 +268,18 @@ Guest properties should include stable ID, appearance seed, position, target til
 ### 7.6 DJ system — P0
 
 - The player's avatar acts as DJ in the base version.
-- Implement genre selection. Historical sources mention broad styles including hip-hop, electronic and pop; verify exact UI/availability from screenshots and guides.
-- A default DJ system is described as having a 15-minute set, with higher-level equipment potentially allowing longer sets. Keep duration in catalog/config rather than hard-coding.
+- Implement genre selection. GameYum lists club mix, hip-hop, electronica and pop (CONFIRMED with myfbapplication for electronic/hip-hop/pop); verify exact UI from screenshots.
+- A default DJ system is described as having a 15-minute set (set duration), with higher-level equipment potentially allowing longer sets. Keep duration in catalog/config rather than hard-coding.
 - Display status, genre, time remaining and an obvious way to refresh/restart a completed set.
-- Implement “Drop the Bass” as a one-click special action that triggers the behavior shown in the source guide (guests are driven toward the bar / thirst or purchasing behavior may rise); treat the precise effect and cooldown as tuneable.
-- Implement “Dedicate Song”/microphone action by selecting an unhappy guest and boosting happiness, as described in the guide.
+- Implement “Drop the Bass” (name: GameYum; effect "make your guests go to the bar": Gamezebo) as a one-click special action; treat the precise effect and cooldown as tuneable.
+- Implement “Dedicate Song” (name: GameYum)/microphone action by selecting **any** guest and boosting happiness (Gamezebo: "targets any guest"). GameYum notes it is useful for calming unhappy guests.
 - Do not use original commercial recordings or copyrighted song snippets. Use silence, synthesized ambience or properly licensed placeholder loops during the reconstruction. Keep audio files pluggable.
 - Timer should be based on timestamps, not frame count. On tab suspension, game should resume consistently rather than skipping or duplicating timers.
 
 ### 7.7 Staff and bouncer — P1
 
 - Worker roster with role label and hire/assign/remove flow.
-- Bartender: serves at a linked bar; speed may depend on furniture/staff parameters.
+- Bartender: serves at a linked bar; speed may depend on furniture/staff parameters. GameYum describes two bartender modes (tricks for bigger tips, speed for double-speed service) — implement as a P1 toggle.
 - Bouncer: assigned position or service area; detects a troublemaker within range and handles a configurable response. Manual “remove guest” action may be supported because historical guides describe it.
 - Visual coverage/range indicator in staff placement mode.
 - Initially use generated NPC staff, not a required real friend invite. Document this as a replacement for Facebook-friend-based hiring.
@@ -280,7 +295,7 @@ Guest properties should include stable ID, appearance seed, position, target til
 
 ### 7.9 Parties, celebrities and guest types — P2
 
-- Party planner includes type, start/finish state, countdown, requirements and rewards. Historical descriptions list themes such as Disco Dance Party, Ladies Night and a charity/black-tie party; validate exact names before treating them as final.
+- Party planner includes type, start/finish state, countdown, requirements and rewards. Party theme names (e.g. Disco Dance Party, Ladies Night, charity/black-tie) are **UNVERIFIED** — none of the audited sources mention them. Find a source before using them.
 - Celebrity booking should cost currency or another configurable resource and increase guest attraction/earnings as supported by evidence.
 - Celebrity wall records who has visited and whether a guest is a repeat/regular. Exact rules must be verified; if unknown, use a documented proposed rule and allow tuning.
 - To avoid unauthorized likenesses, use fictional placeholder VIPs unless licensed/verified original art and names are available. Public-facing release must not imply real artists endorse the project.
@@ -396,7 +411,7 @@ type FurnitureInstance = {
   catalogId: string;
   col: number;
   row: number;
-  rotation: 0 | 90 | 180 | 270;
+  facing: 0 | 1; // isometric sprites usually have two facings (mirrored); feature-flagged
   variant?: string;
 };
 
@@ -406,17 +421,21 @@ type ClubState = {
   totalEarned: number;
   level: number;
   popularity: number;
-  luxury: number;
-  roomWidth: number;
-  roomHeight: number;
+  xp: number;
+  room: { cols: number; rows: number };
   furniture: FurnitureInstance[];
   inventory: Record<string, number>;
   staff: StaffState[];
   appearance: AvatarAppearance;
   music: DJState;
   stock: { drinks: number };
+  tutorialDismissed: boolean;
+  // DJState must store absolute timestamps (setStartedAt/setEndsAt) so timers survive reloads.
+  // Add premium currency, party state and celebrity wall when those systems arrive.
+  nextId: number;
   savedAt: number;
 };
+// Luxury is derived from placed furniture rather than stored.
 ```
 
 Domain models should include stable IDs and `schemaVersion`; never save transient pathfinding nodes, render handles, or Phaser objects into player data.
@@ -433,7 +452,8 @@ Domain models should include stable IDs and `schemaVersion`; never save transien
 4. If original files cannot be used, create original replacement art that matches the broad visual language (shape, scale, palette, perspective and readability) without tracing/copying original sprites in a way that creates a derivative asset without permission.
 5. Use a consistent sprite grid/anchor convention. Keep raw source files and exported game assets separated.
 6. Maintain `ASSET_REGISTER.md` with `assetId`, role, file path, source or creator, license/permission, footprint, anchor, dimensions, animation frames, confidence and known limitations.
-7. Build missing art iteratively. A gray-box prototype is acceptable in early phases if clearly identified as placeholder; it is not acceptable to call the visual reconstruction complete with colored rectangles.
+7. **Decide the art-production method before Phase 1** (procedural vector art, hand-drawn SVG, commissioned art, or AI-assisted generation with provenance recorded). An agent working alone will otherwise default to gray boxes.
+8. Build missing art iteratively. A gray-box prototype is acceptable in early phases if clearly identified as placeholder; it is not acceptable to call the visual reconstruction complete with colored rectangles.
 
 ### Recommended asset-production order
 
@@ -462,11 +482,13 @@ Domain models should include stable IDs and `schemaVersion`; never save transien
 
 **Gate:** Every major feature has at least one source or an explicit `PROPOSED` label. A target set of screenshots is selected. No implementation claim is called exact without evidence.
 
+> **Scope note:** P0 is large. Split it into **P0a** (room, placement, economy, saves) and **P0b** (guests, bar, DJ) and gate each separately.
+
 ### Phase 1 — Playable shell and isometric renderer
 
 **Work:** Create Vite/TypeScript/Phaser app, boot/loading flow, club scene, isometric projection, tile highlighting, object rendering/depth sort, mouse selection, basic camera, HUD wireframe, responsive canvas sizing, debug overlay.
 
-**Gate tests:** App starts with `npm install` + `npm run dev`; production build passes; a 10x10 or configurable room renders; click-to-grid conversion stays aligned at all corners; objects sort correctly; no console errors.
+**Gate tests:** App starts with `npm install` + `npm run dev`; production build, typecheck/lint and tests pass (run lint every phase, not only Phase 7); a 10x10 or configurable room renders; click-to-grid conversion stays aligned at all corners; objects sort correctly; no console errors.
 
 ### Phase 2 — Build mode and furniture catalogue
 
@@ -478,7 +500,7 @@ Domain models should include stable IDs and `schemaVersion`; never save transien
 
 **Work:** Spawn guests, entrances/exits, pathfinding, guest needs/states, dance floor, bar queues, drink sale, tips, happiness, popularity/luxury effects via configurable functions; developer simulation controls.
 
-**Gate tests:** At least 10 guests can path to valid targets; no guest is stuck indefinitely; bar stock decreases exactly once per sale; no negative cash from invalid transactions; stopping music or empty stock has understandable behavior; performance remains acceptable at configured guest cap.
+**Gate tests:** At least 30 guests (matching the master prompt) can path to valid targets; no guest is stuck indefinitely; bar stock decreases exactly once per sale; no negative cash from invalid transactions; stopping music or empty stock has understandable behavior; performance remains acceptable at configured guest cap.
 
 ### Phase 4 — DJ, supplies, staff, main UI
 
