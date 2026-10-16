@@ -94,7 +94,13 @@ try {
     window.__ncr.ix.select({ kind: 'guest', id: g.id });
   });
   await page.waitForTimeout(400);
-  check('guest card shows spent / tip rate / happiness', (await page.locator('.card-guest .stats').textContent())?.includes('Tip Rate') === true);
+  const gc = await page.evaluate(() => ({
+    type: document.querySelector('.card-guest .guest-type')?.textContent ?? '',
+    mood: document.querySelector('.card-guest .mood-word')?.textContent ?? '',
+    stats: document.querySelectorAll('.card-guest .gstat').length,
+    spent: document.querySelector('.card-guest .stats')?.textContent ?? '',
+  }));
+  check('guest card shows type, mood word, stat icons and spent', gc.type.length > 0 && gc.mood.length > 0 && gc.stats === 3 && gc.spent.includes('Spent'), JSON.stringify(gc));
   await page.keyboard.press('Escape');
 
   await click('.dock-btn[data-id="build"]');
@@ -146,6 +152,23 @@ try {
   await page.screenshot({ path: `${SHOTS}/06-workers.png` });
   await page.click('.panel-tabbed .btn.ok');
 
+  // The bouncer walks over to a troublemaker and escorts them out on his own
+  const bouncerJob = await page.evaluate(async () => {
+    const { game } = window.__ncr;
+    const id = game.state.staff[1].id;
+    const g = game.sim.spawn(game.state, Date.now());
+    g.troublemaker = true;
+    g.troubleAt = Date.now();
+    let moved = false;
+    const start = Date.now();
+    while (Date.now() - start < 20000 && !g.escorted) {
+      await new Promise((r) => setTimeout(r, 100));
+      if (game.sim.bouncerAt(id)?.moving) moved = true;
+    }
+    return { escorted: g.escorted, moved };
+  });
+  check('a bouncer walks to a troublemaker in his area and escorts them out', bouncerJob.escorted && bouncerJob.moved, JSON.stringify(bouncerJob));
+
   // Celebrities: panel opens from the dock star and books a VIP
   await page.evaluate(() => {
     const { game } = window.__ncr;
@@ -154,7 +177,7 @@ try {
   await click('.dock-btn[data-id="celebs"]');
   // Guests keep paying while we click, so net out anything earned in between.
   const before = await page.evaluate(() => ({ cash: window.__ncr.game.state.cash, earned: window.__ncr.game.state.totalEarned }));
-  await click('.celeb-card >> nth=0 >> .btn');
+  await click('.celeb-card >> nth=0 >> .celeb-buy');
   const after = await page.evaluate(() => ({ b: window.__ncr.game.state.celebrity?.id, cash: window.__ncr.game.state.cash, earned: window.__ncr.game.state.totalEarned }));
   const charged = before.cash - after.cash + (after.earned - before.earned);
   check('Celebrities panel books a VIP and charges once', after.b === 'dj_nova' && charged === 1500, `charged $${charged}`);
@@ -166,18 +189,33 @@ try {
     const { game } = window.__ncr;
     game.replaceState({ ...game.state, cash: game.state.cash + 1000 });
   });
-  await click('.dock-btn[data-id="party"]');
+  await click('.disco-ball');
   const pBefore = await page.evaluate(() => ({ cash: window.__ncr.game.state.cash, earned: window.__ncr.game.state.totalEarned }));
   await click('.party-card[data-party="neon_night"] >> .btn');
   const pAfter = await page.evaluate(() => ({ p: window.__ncr.game.state.party?.id, cash: window.__ncr.game.state.cash, earned: window.__ncr.game.state.totalEarned }));
   const pCharged = pBefore.cash - pAfter.cash + (pAfter.earned - pBefore.earned);
   await page.waitForTimeout(1200);
-  const pill = await page.locator('.party-pill:not(.hidden)').count();
-  check('Party planner starts a party, charges once, shows the HUD pill', pAfter.p === 'neon_night' && pCharged === 500 && pill === 1, `charged $${pCharged}, pill ${pill}`);
+  const pill = await page.locator('.party-cta.on').count();
+  check('THROW A PARTY! opens the planner, starts a party, charges once, shows the countdown', pAfter.p === 'neon_night' && pCharged === 500 && pill === 1, `charged $${pCharged}, pill ${pill}`);
   await page.screenshot({ path: `${SHOTS}/06c-party.png` });
   await page.click('.party-panel .btn.corner');
   await page.waitForTimeout(600);
   await page.screenshot({ path: `${SHOTS}/06d-party-club.png` });
+
+  // Top-right club name renames inline; Wish marks a celebrity; now playing shows the end time
+  await page.click('.club-name');
+  await page.fill('.club-name-input', 'Smoke Club');
+  await page.keyboard.press('Enter');
+  await click('.dock-btn[data-id="celebs"]');
+  await click('.celeb-card >> nth=0 >> .celeb-wish');
+  await page.click('.celeb-panel .btn.corner');
+  const iface = await page.evaluate(() => ({
+    name: window.__ncr.game.state.clubName,
+    label: document.querySelector('.club-name')?.textContent,
+    wishes: window.__ncr.game.state.celebWishes,
+    ends: document.querySelector('.np-ends')?.textContent ?? '',
+  }));
+  check('club name renames, Wish saves, now playing shows "Ends: <time>"', iface.name === 'Smoke Club' && iface.label === 'Smoke Club' && iface.wishes.length === 1 && /^Ends: \d{1,2}:\d\d(am|pm)$/.test(iface.ends), JSON.stringify(iface));
 
   // Progress screen: opens from the level badge, highlights the current level, shows what's next
   await click('.level-badge');

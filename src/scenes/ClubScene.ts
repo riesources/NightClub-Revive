@@ -486,8 +486,11 @@ export class ClubScene extends Phaser.Scene {
     const seen = new Set<string>();
     for (const s of state.staff) {
       let at: { x: number; y: number; depth: number } | null = null;
+      let walking = false;
       if (s.role === 'bouncer' && s.post) {
-        at = { x: s.post.col + 0.5, y: s.post.row + 0.5, depth: (s.post.col + s.post.row + 1) * 100 + 50 };
+        const pos = this.game_.sim.bouncerAt(s.id) ?? { x: s.post.col + 0.5, y: s.post.row + 0.5, moving: false };
+        walking = pos.moving;
+        at = { x: pos.x, y: pos.y, depth: (Math.floor(pos.x) + Math.floor(pos.y) + 1) * 100 + 50 };
       } else if (s.role === 'bartender' && s.barId) {
         const bar = state.furniture.find((f) => f.id === s.barId);
         if (bar) {
@@ -507,12 +510,10 @@ export class ClubScene extends Phaser.Scene {
       g.clear();
       g.setDepth(at.depth);
       const p = gridToScreen(at.x, at.y, this.cfg);
-      const busy = s.role === 'bouncer' && (this.game_.sim.bouncerBusyUntil.get(s.id) ?? 0) > now;
-      g.setAlpha(busy ? 0.45 : 1);
       drawAvatar(new PhaserPainter(g), staffAppearance(s), p.x, p.y, 0.74, {
-        phase: (now / 1100 + s.id.length) % 1,
+        phase: walking ? (now / 380) % 1 : (now / 1100 + s.id.length) % 1,
         dancing: false,
-        walking: false,
+        walking,
         arms: s.role === 'bartender' ? 'drink' : 'down',
         shades: s.role === 'bouncer',
       });
@@ -529,10 +530,19 @@ export class ClubScene extends Phaser.Scene {
   private drawDj(state: ClubState, now: number, playing: boolean): void {
     const g = this.djAvatar;
     g.clear();
-    const booth = state.furniture.find((f) => getFurnitureDef(f.catalogId)?.kind === 'dj');
+    // Stand at the best booth (the one that sets the set length); podiums lift the DJ up.
+    let booth: (typeof state.furniture)[number] | undefined;
+    for (const f of state.furniture) {
+      const d = getFurnitureDef(f.catalogId);
+      if (d?.kind !== 'dj') continue;
+      const cur = booth ? (getFurnitureDef(booth.catalogId)?.djSetMs ?? 0) : -1;
+      if ((d.djSetMs ?? 0) > cur) booth = f;
+    }
     if (!booth) return;
     const { w, h } = footprintSize(booth.catalogId, booth.facing);
-    const back = booth.facing === 0 ? gridToScreen(booth.col + w / 2, booth.row + 0.05, this.cfg) : gridToScreen(booth.col + 0.05, booth.row + h / 2, this.cfg);
+    const lift = getFurnitureDef(booth.catalogId)?.art.style === 'podium' ? 12 : 0;
+    const base = booth.facing === 0 ? gridToScreen(booth.col + w / 2, booth.row + 0.05, this.cfg) : gridToScreen(booth.col + 0.05, booth.row + h / 2, this.cfg);
+    const back = { x: base.x, y: base.y - lift };
     g.setDepth((depthFor(booth.col, booth.row, w, h) - 1) * 100 - 1);
     if (playing) {
       // blue spotlight ring around the DJ, as in the reference screenshots

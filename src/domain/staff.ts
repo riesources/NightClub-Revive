@@ -2,7 +2,7 @@ import { getFurnitureDef } from '../data/furnitureCatalog';
 import { WORKER_SLOT_LEVELS } from '../data/progression';
 import { tuning } from '../data/tuning';
 import { clone, newId } from './club';
-import { entranceCell, inBounds } from './grid';
+import { blockedCells, cellKey, entranceCell, inBounds } from './grid';
 import { fail, ok, type ClubState, type GridPoint, type Result } from './types';
 
 /** PROPOSED placeholder NPC names (replaces the original Facebook-friend hiring). */
@@ -49,9 +49,30 @@ export function bartenderForBar(state: ClubState, barId: string) {
 }
 
 /**
+ * Default bouncer post: the free tile nearest the middle of the club, so the
+ * area covers as much of the floor as possible (PROPOSED).
+ */
+export function defaultBouncerPost(state: ClubState): GridPoint {
+  const { cols, rows } = state.room;
+  const blocked = blockedCells(state);
+  const c0 = Math.floor(cols / 2);
+  const r0 = Math.floor(rows / 2);
+  for (let d = 0; d < Math.max(cols, rows); d++) {
+    for (let c = c0 - d; c <= c0 + d; c++) {
+      for (let r = r0 - d; r <= r0 + d; r++) {
+        if (Math.max(Math.abs(c - c0), Math.abs(r - r0)) !== d) continue;
+        if (inBounds(state.room, { col: c, row: r }) && !blocked.has(cellKey(c, r))) return { col: c, row: r };
+      }
+    }
+  }
+  const e = entranceCell(state.room);
+  return { col: e.col, row: e.row + 2 };
+}
+
+/**
  * Switch a worker between Bar Tender and Bouncer (CONFIRMED: the Workers panel
  * offers "Switch to Bouncer" / "Switch to Bartender"). A new bouncer starts
- * posted just inside the door (PROPOSED default).
+ * posted in the middle of the club (PROPOSED default).
  */
 export function switchRole(state: ClubState, staffId: string): Result {
   const s = state.staff.find((x) => x.id === staffId);
@@ -59,10 +80,9 @@ export function switchRole(state: ClubState, staffId: string): Result {
   const draft = clone(state);
   const m = draft.staff.find((x) => x.id === staffId)!;
   if (m.role === 'bartender') {
-    const e = entranceCell(draft.room);
     m.role = 'bouncer';
     m.barId = null;
-    m.post = { col: e.col, row: e.row + 2 };
+    m.post = defaultBouncerPost(draft);
   } else {
     m.role = 'bartender';
     m.post = null;

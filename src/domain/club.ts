@@ -13,6 +13,15 @@ export function newId(draft: ClubState, prefix: string): string {
   return id;
 }
 
+export const DEFAULT_CLUB_NAME = 'My Club';
+export const CLUB_NAME_MAX = 24;
+
+/** Trim and validate a club name; null when unusable. */
+export function cleanClubName(name: string): string | null {
+  const n = name.replace(/\s+/g, ' ').trim();
+  return n.length >= 1 && n.length <= CLUB_NAME_MAX ? n : null;
+}
+
 /** A fresh club with a small PROPOSED starter layout so the loop is playable immediately. */
 export function createNewClub(now = Date.now()): ClubState {
   const state: ClubState = {
@@ -34,6 +43,8 @@ export function createNewClub(now = Date.now()): ClubState {
     celebrity: null,
     party: null,
     partyHistory: {},
+    clubName: DEFAULT_CLUB_NAME,
+    celebWishes: [],
     nextId: 1,
     savedAt: now,
   };

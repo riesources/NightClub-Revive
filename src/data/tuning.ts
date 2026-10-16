@@ -77,9 +77,13 @@ export const tuning = {
   /** PROPOSED: troublemakers storm out on their own after this long. */
   troubleMaxMs: 45_000,
   /** PROPOSED: bouncer coverage radius in tiles (Gamezebo: "within their area" - CONFIRMED concept). */
-  bouncerRadius: 3,
-  /** PROPOSED: how long a bouncer is busy escorting someone out. */
-  bouncerCooldownMs: 6000,
+  bouncerRadius: 4,
+  /** PROPOSED: bouncers walk a little faster than guests (tiles per second). */
+  bouncerWalkSpeed: 3.2,
+  /** PROPOSED: a bouncer escorts once within this many tiles of the troublemaker. */
+  bouncerReach: 1.2,
+  /** PROPOSED: rest after an escort before the next job. */
+  bouncerCooldownMs: 3000,
 
   // --- DJ -------------------------------------------------------------------
   /**

@@ -1,5 +1,63 @@
 # Build Log
 
+## 2026-10-16 — Interface from the gameplay video, and a furniture pack
+
+Source: frames from the gameplay video S10 (see `EVIDENCE_REGISTER.md`).
+
+**Interface (matches S10)**
+- **THROW A PARTY!** button with a disco ball in the top-right corner, under the scores. It replaces the dock's Party button. While a party runs, it shows `PARTY ON! m:ss · guests/goal` and the ball spins.
+- **Now playing** moved to the top left, under the DJ buttons. It has **Like** (a per-browser favourite), **Change** (pick a mix) and **"Ends: 6:41pm"** in clock time.
+- **Guest card**: the guest type (Regular / Celebrity / Troublemaker) under the name, a **mood word** (Enthusiastic, Happy, Content, Bored, Upset; Rowdy for troublemakers), and icons for happiness, thirst and tip rate, plus Spent.
+- **Celebrity cards**: a gold star showing the popularity bonus, **Buy** and **Wish** buttons on the portrait, and a green price. Wishes are saved.
+- **Club name** in the top right; click it to rename (1–24 characters).
+- Schema v7 adds `clubName` and `celebWishes`, with a v6→v7 migration.
+
+**Furniture pack (11 items, all PROPOSED prices and levels, original drawings)**
+
+| Item | Level | Price | Luxury |
+|---|---|---|---|
+| Teal Glass Tile | 2 | $150 | 7 |
+| Velvet Rope (2×1) | 2 | $600 | 20 |
+| White Leather Sofa (2×1) | 3 | $2,000 | 40 |
+| Diamond Light Tile | 4 | $600 | 15 |
+| Gold Dancer Statue | 4 | $5,000 | 90 |
+| Go-Go Dancer Tube | 5 | $9,000 | 140 |
+| Aquarium Wall (2×1, swimming fish) | 6 | $14,000 | 200 |
+| Podium DJ Booth (2×1, 45-min sets) | 6 | $15,000 | 220 |
+| Rose Petal Fountain (2×2, ripples) | 7 | $20,000 | 260 |
+| Golden Buddha | 8 | $30,000 | 350 |
+
+- The DJ now stands at the best booth, raised on a podium. Build-menu items are sorted by level, then price.
+- The Progress screen picks up all new items automatically.
+
+**Commands run and results**
+- `npx vitest run`: 106/106 passed (8 new: club name, wishes, mood words, v6→v7 migration/validation, catalogue sanity, every item draws finite shapes, the pack places and blocks correctly).
+- `npm run build`: passes.
+- `node scripts/smoke.mjs`: 24/24 passed (new or updated checks: THROW A PARTY!, guest card parts, club rename + Wish + "Ends:" time).
+- Real-app screenshots reviewed: new HUD, guest card, celebrity cards, party countdown, renamed club, all new furniture in a club and in the build menu.
+
+
+## 2026-10-16 — Bouncer fix: he now walks over and handles trouble
+
+**Problem (reported by the user):** the bouncer didn't seem to do his job. A seeded simulation of the starter club confirmed it:
+- only 28% of troublemakers started inside the bouncer's area, because the default post was by the door and his area was only 7×7;
+- 1 in 10 troublemakers ran loose for 15+ seconds (worst case 45 s), and some stormed out, costing popularity;
+- the bouncer never moved. A troublemaker in his area just vanished while he faded out at his post, so it was easy to miss that he did anything.
+
+**Changed**
+- Bouncers now **walk** to the troublemaker (pathfinding, a little faster than guests), escort them out with "BOUNCED!", then walk back to their post. The troublemaker stops and waits while the bouncer comes, and stops upsetting guests.
+- **Send Bouncer** sends the nearest free bouncer, who walks over the same way.
+- A new bouncer is posted in the **middle of the club** (nearest free tile), not by the door. His area grows from 7×7 to **9×9** (radius 4), and his rest after an escort drops from 6 s to 3 s. All PROPOSED.
+- Clearer warning: it says whether the troublemaker is outside your bouncer's area (Send Bouncer or move his post), or that you have no bouncer at all.
+
+**Result (same simulation, 5 seeds × 56 minutes):** 58% start inside the area (was 28%), every troublemaker handled (was 448/450), 90% within 3 s including the walk (was 14.6 s), worst case 11.5 s (was 45 s).
+
+**Commands run and results**
+- `npx vitest run`: 98/98 passed (3 new or rewritten bouncer tests: walk-escort-return, waiting troublemaker doesn't time out or drain happiness, Send Bouncer busy/already-on-the-way).
+- `npm run build`: passes.
+- `node scripts/smoke.mjs`: 23/23 passed (new check: in the real app a bouncer walks to a troublemaker and escorts them out).
+
+
 ## 2026-10-16 — Level / progress screen
 
 **Added**

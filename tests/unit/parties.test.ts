@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PARTIES, getParty } from '../../src/data/parties';
 import { chargeCover, coverCharge } from '../../src/domain/bar';
 import { createNewClub } from '../../src/domain/club';
+import { SCHEMA_VERSION } from '../../src/domain/types';
 import { Game, type GameEvent } from '../../src/domain/game';
 import { finishParty, partyActive, startParty } from '../../src/domain/party';
 import { createRng } from '../../src/domain/rng';
@@ -127,7 +128,7 @@ describe('v5 -> v6 migration', () => {
     const r = new LocalSaveRepository(store).load();
     expect(r.status).toBe('ok');
     if (r.status === 'ok') {
-      expect(r.state.schemaVersion).toBe(6);
+      expect(r.state.schemaVersion).toBe(SCHEMA_VERSION);
       expect(r.state.party).toBe(null);
       expect(r.state.partyHistory).toEqual({});
     }

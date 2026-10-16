@@ -13,7 +13,7 @@ import { computeLuxury } from '../domain/club';
 import * as dj from '../domain/dj';
 import { features, sellRefund } from '../domain/economy';
 import type { Game, GameEvent } from '../domain/game';
-import type { Guest } from '../domain/guests/guest';
+import { moodWord, type Guest } from '../domain/guests/guest';
 import { xpProgress } from '../domain/progression';
 import { bartenderForBar, workerSlots } from '../domain/staff';
 import { GENRES, GENRE_LABELS, type Genre } from '../domain/types';
@@ -46,6 +46,13 @@ function swap(container: HTMLElement, nodes: (HTMLElement | null)[]): void {
   }
   container.dataset.sig = sig;
   container.replaceChildren(...real);
+}
+
+/** Wall-clock time like the original's "Ends: 9:38pm" (S10). */
+function clockTime(ts: number): string {
+  const d = new Date(ts);
+  const h12 = d.getHours() % 12 || 12;
+  return `${h12}:${String(d.getMinutes()).padStart(2, '0')}${d.getHours() < 12 ? 'am' : 'pm'}`;
 }
 
 const live = (text: string) => h('span', { 'data-live': '' }, text);
@@ -163,7 +170,16 @@ export class UI {
         this.toast('A guest wanted a drink but no bar is staffed.', 'error');
         break;
       case 'troubleStarted':
-        if (!e.covered) this.toast('A troublemaker is causing a scene! Click them and Send Bouncer.', 'error', 4000);
+        if (!e.covered) {
+          const has = this.game.state.staff.some((m) => m.role === 'bouncer');
+          this.toast(
+            has
+              ? "A troublemaker is outside your bouncer's area! Click them and Send Bouncer, or move his post in Workers."
+              : 'A troublemaker is causing a scene! Switch a worker to Bouncer in Workers to handle them.',
+            'error',
+            5000,
+          );
+        }
         break;
       case 'troubleUnresolved':
         this.toast(`A troublemaker stormed out. Popularity -${tuning.troublePopularityPenalty}`, 'error');
@@ -209,18 +225,25 @@ export class UI {
     r.xpTitle = h('div', { class: 'xp-title' });
     // Top-centre cash, top-right scores
     r.cash = h('div', { class: 'cash-text' });
-    r.partyText = h('span', {});
-    r.partyPill = h('button', { class: 'party-pill hidden', title: 'Party in progress', onclick: () => this.openParties() }, icon(ICONS.party, 'pill-ball'), r.partyText);
+    r.clubName = h('button', { class: 'club-name', title: 'Click to rename your club', onclick: () => this.renameClub() });
+    r.partyCta = h('button', { class: 'party-cta', title: 'Throw a party', onclick: () => this.openParties() });
+    r.discoBall = h('button', { class: 'disco-ball', title: 'Parties', 'aria-label': 'Parties', onclick: () => this.openParties() }, icon(ICONS.party));
     r.pop = h('div', { class: 'score-num' });
     r.lux = h('div', { class: 'score-num' });
     this.top.append(
       h('div', { class: 'player' }, r.portrait, r.level, h('div', { class: 'xp', title: 'Your progress: what you have unlocked and what comes next', onclick: () => this.openProgress() }, h('div', { class: 'xp-bar' }, r.xpFill, r.xpText), r.xpTitle)),
-      h('div', { class: 'cash', title: 'Cash' }, icon(ICONS.money, 'money-icon'), r.cash, r.partyPill),
+      h('div', { class: 'cash', title: 'Cash' }, icon(ICONS.money, 'money-icon'), r.cash),
       h(
         'div',
-        { class: 'scores' },
-        h('div', { class: 'score', title: 'Popularity: raises how many guests come and the cover charge they pay' }, r.pop, h('div', { class: 'score-label' }, 'POPULARITY')),
-        h('div', { class: 'score', title: 'Luxury: from your furniture; raises tips' }, r.lux, h('div', { class: 'score-label' }, 'LUXURY')),
+        { class: 'hud-right' },
+        r.clubName,
+        h(
+          'div',
+          { class: 'scores' },
+          h('div', { class: 'score', title: 'Popularity: raises how many guests come and the cover charge they pay' }, r.pop, h('div', { class: 'score-label' }, 'POPULARITY')),
+          h('div', { class: 'score', title: 'Luxury: from your furniture; raises tips' }, r.lux, h('div', { class: 'score-label' }, 'LUXURY')),
+        ),
+        h('div', { class: 'party-row' }, r.partyCta, r.discoBall),
       ),
     );
 
@@ -252,11 +275,17 @@ export class UI {
     this.renderMute();
 
     // Now playing (bottom-left)
-    r.npArt = h('div', { class: 'np-art', html: ICONS.note });
+    // Now playing, top-left under the DJ buttons (S10): art, track, Like, Change, end time.
+    r.npArt = h('button', { class: 'np-art', title: 'DJ', 'aria-label': 'DJ', html: ICONS.note, onclick: () => this.showDjCard() });
     r.npTitle = h('div', { class: 'np-title' });
     r.npSub = h('div', { class: 'np-sub' });
-    this.nowPlaying.append(r.npArt, h('div', {}, r.npTitle, r.npSub));
-    this.nowPlaying.addEventListener('click', () => this.showDjCard());
+    r.npLike = h('button', { class: 'np-like', title: 'Like this mix', onclick: () => this.toggleLike() });
+    r.npChange = h('button', { class: 'np-change', title: 'Pick a mix', onclick: () => this.openGenrePicker() });
+    r.npEnds = h('div', { class: 'np-ends' });
+    this.nowPlaying.append(
+      h('div', { class: 'np-top' }, r.npArt, h('div', { class: 'np-text' }, r.npTitle, r.npSub, r.npLike)),
+      h('div', { class: 'np-bottom' }, r.npChange, r.npEnds),
+    );
 
     // Dock: character-icon buttons on a sky-blue band
     const dockBtn = (svg: string, label: string, id: string, onclick: () => void, soon = false) =>
@@ -271,7 +300,6 @@ export class UI {
         dockBtn(ICONS.workers, 'Workers', 'workers', () => this.openWorkers()),
         dockBtn(ICONS.build, 'Decorate', 'build', () => this.openBuild()),
         dockBtn(ICONS.celebs, 'Celebrities', 'celebs', () => this.openCelebrities()),
-        dockBtn(ICONS.party, 'Party', 'party', () => this.openParties()),
       ),
     );
   }
@@ -302,17 +330,65 @@ export class UI {
     this.renderPartyPill();
   }
 
+  /** "THROW A PARTY!" (S10); while a party runs it shows the countdown and guests vs goal. */
   private renderPartyPill(): void {
     const s = this.game.state;
-    const pill = this.refs.partyPill;
+    const r = this.refs;
     const now = Date.now();
     const def = s.party ? getParty(s.party.id) : undefined;
     const on = !!def && partyActive(s, now);
-    pill.classList.toggle('hidden', !on);
-    if (!on || !def) return;
-    const text = `${mmss(s.party!.endsAt - now)} · ${s.party!.guests}/${def.goalGuests} guests`;
-    if (this.refs.partyText.textContent !== text) this.refs.partyText.textContent = text;
-    pill.classList.toggle('met', s.party!.guests >= def.goalGuests);
+    const text = on && def ? `PARTY ON! ${mmss(s.party!.endsAt - now)} · ${s.party!.guests}/${def.goalGuests}` : 'THROW A PARTY!';
+    if (r.partyCta.textContent !== text) r.partyCta.textContent = text;
+    r.partyCta.classList.toggle('on', on);
+    r.partyCta.classList.toggle('met', on && !!def && s.party!.guests >= def.goalGuests);
+    r.discoBall.classList.toggle('spin', on);
+    if (r.clubName.textContent !== s.clubName && !r.clubName.querySelector('input')) r.clubName.textContent = s.clubName;
+  }
+
+  /** Inline rename of the club name label. */
+  private renameClub(): void {
+    const label = this.refs.clubName;
+    if (label.querySelector('input')) return;
+    const input = h('input', { class: 'club-name-input', maxlength: 24, value: this.game.state.clubName, 'aria-label': 'Club name' }) as HTMLInputElement;
+    let done = false;
+    const finish = (save: boolean) => {
+      if (done) return;
+      done = true;
+      if (save && input.value.trim() !== this.game.state.clubName) this.game.renameClub(input.value);
+      label.textContent = this.game.state.clubName;
+    };
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') finish(true);
+      if (e.key === 'Escape') finish(false);
+    });
+    input.addEventListener('click', (e) => e.stopPropagation());
+    input.addEventListener('blur', () => finish(true));
+    label.replaceChildren(input);
+    input.focus();
+    input.select();
+  }
+
+  private likedMixes(): string[] {
+    try {
+      return JSON.parse(localStorage.getItem('nightclub-revive.liked') ?? '[]') as string[];
+    } catch {
+      return [];
+    }
+  }
+
+  /** Like is a per-viewer bookmark of favourite mixes (the original posted it to Facebook). */
+  private toggleLike(): void {
+    const g = this.game.state.dj.genre;
+    const cur = this.likedMixes();
+    const next = cur.includes(g) ? cur.filter((x) => x !== g) : [...cur, g];
+    try {
+      localStorage.setItem('nightclub-revive.liked', JSON.stringify(next));
+    } catch {
+      /* per-viewer convenience only */
+    }
+    if (!cur.includes(g)) this.toast(`You liked ${MIX_LABELS[g as Genre]}!`, 'good');
+    this.renderDjStatus();
   }
 
   private renderDjStatus(): void {
@@ -325,7 +401,14 @@ export class UI {
     (r.qMic as HTMLButtonElement).disabled = !playing || dj.cooldownLeft(s.dj.lastDedicateAt, tuning.dedicateCooldownMs, now) > 0;
     r.qRecord.classList.toggle('attention', !playing);
     r.npTitle.textContent = playing ? MIX_LABELS[s.dj.genre] : 'No set playing';
-    r.npSub.textContent = playing ? `Original loop · ${mmss(dj.timeRemaining(s, now))} left` : 'Click to start a set';
+    r.npSub.textContent = playing ? 'Original loop' : 'Pick a mix to open the club';
+    r.npChange.textContent = playing ? 'Change' : 'Start';
+    r.npEnds.textContent = playing && s.dj.setEndsAt ? `Ends: ${clockTime(s.dj.setEndsAt)}` : '';
+    const liked = playing && this.likedMixes().includes(s.dj.genre);
+    const likeText = liked ? '♥ Liked' : '♡ Like';
+    if (r.npLike.textContent !== likeText) r.npLike.textContent = likeText;
+    r.npLike.classList.toggle('on', liked);
+    r.npLike.classList.toggle('hidden', !playing);
     this.nowPlaying.classList.toggle('on', playing);
   }
 
@@ -409,24 +492,27 @@ export class UI {
     } else if (c.kind === 'guest') {
       const g = this.game.sim.guests.find((x) => x.id === c.id);
       if (g) {
+        const type = g.state === 'TROUBLEMAKER' ? 'Troublemaker' : g.guestClass;
+        const stat = (svg: string, value: HTMLElement | string, title: string) => h('span', { class: 'gstat', title }, icon(svg, 'gstat-icon'), value);
         nodes = this.cardShell(
           portrait(g.appearance, 92, { full: true }),
           g.name,
-          null,
+          h('span', { class: `guest-type t-${type.toLowerCase()}` }, type === 'Celebrity' ? '★ Celebrity ★' : type),
           [
+            h('div', { class: 'mood-row' }, h('span', { class: `mood-word m-${moodWord(g).toLowerCase()}` }, live(moodWord(g)))),
+            h(
+              'div',
+              { class: 'gstats' },
+              stat(ICONS.smile, live(String(Math.round(g.happiness))), 'Happiness'),
+              stat(ICONS.cocktail, live(String(Math.round(g.thirst))), 'Thirst'),
+              stat(ICONS.coin, `${Math.round(g.tipRate * 100)}%`, 'Tip rate'),
+            ),
             h('div', { class: 'bubble' }, live(`"${quoteFor(g, this.game)}"`)),
             g.state === 'TROUBLEMAKER'
               ? h('div', { class: 'card-actions' }, h('button', { class: 'btn danger', onclick: () => this.game.sendBouncer(g.id) }, 'Send Bouncer'))
               : null,
-            h(
-              'div',
-              { class: 'stats' },
-              h('div', {}, h('span', {}, 'Spent:'), h('b', {}, live(`$${fmt(g.spent)}`))),
-              h('div', {}, h('span', {}, 'Tip Rate:'), h('b', {}, `${Math.round(g.tipRate * 100)}%`)),
-              h('div', {}, h('span', {}, 'Happiness:'), h('b', {}, live(String(Math.round(g.happiness))))),
-            ),
+            h('div', { class: 'stats' }, h('div', {}, h('span', {}, 'Spent:'), h('b', {}, live(`$${fmt(g.spent)}`)))),
           ],
-          g.state === 'TROUBLEMAKER' ? 'Troublemaker' : g.guestClass === 'Celebrity' ? '★ Celebrity ★' : g.guestClass,
         );
       }
     } else if (c.kind === 'furniture') {
@@ -535,7 +621,8 @@ export class UI {
     const s = this.game.state;
     const cats = Object.keys(CATEGORY_LABELS) as FurnitureCategory[];
     const items = h('div', { class: 'items' });
-    for (const f of FURNITURE.filter((x) => x.category === this.buildCategory)) {
+    const inCategory = FURNITURE.filter((x) => x.category === this.buildCategory).sort((a, b) => a.requiredLevel - b.requiredLevel || a.price - b.price);
+    for (const f of inCategory) {
       const locked = s.level < f.requiredLevel;
       const poor = s.cash < f.price;
       const selected = this.ix.mode.kind === 'place' && this.ix.mode.catalogId === f.id;
@@ -711,27 +798,52 @@ export class UI {
       const cards = CELEBRITIES.map((c) => {
         const locked = s.level < c.requiredLevel;
         const visits = s.celebrityWall[c.id] ?? 0;
+        const wished = s.celebWishes.includes(c.id);
         return h(
           'div',
           { class: `celeb-card${locked ? ' locked' : ''}`, title: `${c.name} - ${c.title}` },
           visits ? h('div', { class: 'celeb-visits', title: 'Visits' }, `★×${visits}`) : null,
-          h('div', { class: 'celeb-art' }, portrait(c.look, 76, { full: true }), locked ? icon(ICONS.lock, 'item-lock') : null),
+          // Card layout after S10: gold popularity star, Buy / Wish on the portrait, green price.
+          h('div', { class: 'celeb-star', title: `Popularity +${c.popularityBonus} after the visit` }, String(c.popularityBonus)),
+          h(
+            'div',
+            { class: 'celeb-art' },
+            portrait(c.look, 76, { full: true }),
+            locked ? icon(ICONS.lock, 'item-lock') : null,
+            locked
+              ? null
+              : h(
+                  'div',
+                  { class: 'celeb-btns' },
+                  h(
+                    'button',
+                    {
+                      class: 'celeb-buy',
+                      disabled: !!b || s.cash < c.cost,
+                      title: b ? 'One celebrity at a time' : s.cash < c.cost ? 'Not enough cash' : `Book for $${fmt(c.cost)}`,
+                      onclick: () => {
+                        if (this.game.bookCelebrity(c.id).ok) render();
+                      },
+                    },
+                    'Buy',
+                  ),
+                  h(
+                    'button',
+                    {
+                      class: `celeb-wish${wished ? ' on' : ''}`,
+                      title: wished ? 'On your wish list' : 'Add to your wish list',
+                      onclick: () => {
+                        this.game.toggleCelebWish(c.id);
+                        render();
+                      },
+                    },
+                    wished ? '♥ Wish' : 'Wish',
+                  ),
+                ),
+          ),
           h('div', { class: 'celeb-name' }, c.name),
-          h('div', { class: 'celeb-level' }, `Level ${c.requiredLevel}`),
-          locked
-            ? h('div', { class: 'celeb-price' }, `$${fmt(c.cost)}`)
-            : h(
-                'button',
-                {
-                  class: 'btn ok tiny',
-                  disabled: !!b || s.cash < c.cost,
-                  title: b ? 'One celebrity at a time' : s.cash < c.cost ? 'Not enough cash' : `Book for $${fmt(c.cost)}`,
-                  onclick: () => {
-                    if (this.game.bookCelebrity(c.id).ok) render();
-                  },
-                },
-                `Book $${fmt(c.cost)}`,
-              ),
+          h('div', { class: 'celeb-level' }, locked ? `Level ${c.requiredLevel}` : wished ? 'On your wish list' : `Level ${c.requiredLevel}`),
+          h('div', { class: 'celeb-price' }, `$${fmt(c.cost)}`),
         );
       });
       body.replaceChildren(

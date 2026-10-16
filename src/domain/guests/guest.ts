@@ -62,6 +62,8 @@ export interface Guest {
   escorted: boolean;
   /** Stormed out on their own after making trouble (costs popularity). */
   troubleUnresolved: boolean;
+  /** Staff id of the bouncer walking over to escort this troublemaker. */
+  caughtBy: string | null;
   seed: number;
   appearance: AvatarAppearance;
   prefGenre: Genre;
@@ -91,6 +93,20 @@ export function moodOf(happiness: number, happyThreshold: number, unhappyThresho
   if (happiness >= happyThreshold) return 'happy';
   if (happiness < unhappyThreshold) return 'unhappy';
   return 'neutral';
+}
+
+/**
+ * One-word mood for the guest card. The original showed words like
+ * "Enthusiastic" (S10); the scale and other words are PROPOSED.
+ */
+export function moodWord(g: Pick<Guest, 'state' | 'happiness'>): string {
+  if (g.state === 'TROUBLEMAKER') return 'Rowdy';
+  const h = g.happiness;
+  if (h >= 85) return 'Enthusiastic';
+  if (h >= 65) return 'Happy';
+  if (h >= 45) return 'Content';
+  if (h >= 25) return 'Bored';
+  return 'Upset';
 }
 
 export function guestCell(g: Guest): GridPoint {

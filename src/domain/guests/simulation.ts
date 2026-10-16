@@ -37,6 +37,16 @@ export type SimEvent =
   | { type: 'celebLeft'; celebId: string; bonus: number }
   | { type: 'partyEnded'; success: boolean; rewardCash: number; rewardPopularity: number };
 
+/** A bouncer on the floor: walks to a troublemaker, escorts them, walks back to the post. */
+export interface BouncerUnit {
+  x: number;
+  y: number;
+  path: GridPoint[];
+  /** Guest being escorted, or null when idle / heading back to the post. */
+  target: string | null;
+  moving: boolean;
+}
+
 interface WorldCache {
   state: ClubState;
   blocked: Set<string>;
@@ -67,6 +77,8 @@ export class GuestSimulation {
   spawnEnabled = true;
   /** Bouncer staff id -> time they are free again after an escort. */
   readonly bouncerBusyUntil = new Map<string, number>();
+  /** Where each bouncer is and what they are doing (runtime only, not saved). */
+  readonly bouncers = new Map<string, BouncerUnit>();
   private celebGuestId: string | null = null;
   private nextCelebSpendAt = 0;
 
@@ -109,6 +121,7 @@ export class GuestSimulation {
       troubleAt: now + tuning.troubleStartMinMs + this.rng() * (tuning.troubleStartMaxMs - tuning.troubleStartMinMs),
       escorted: false,
       troubleUnresolved: false,
+      caughtBy: null,
       seed,
       appearance: appearanceFromSeed(seed),
       prefGenre: pickOne(this.rng, GENRES)!,
@@ -191,7 +204,7 @@ export class GuestSimulation {
       if (ended.leveledUp) host.emit({ type: 'levelUp', level: ended.level, reward: 0 });
     }
     this.applyTrouble(dt);
-    this.runBouncers(host, state, now);
+    this.runBouncers(host, state, now, dt);
     state = this.serveBars(host, now);
 
     if (departed.length) {
@@ -341,6 +354,7 @@ export class GuestSimulation {
   private think(g: Guest, w: WorldCache, state: ClubState, now: number, host: SimHost): void {
     const arrived = g.path.length === 0;
     if (g.state === 'TROUBLEMAKER') {
+      if (g.caughtBy) return; // standing still while the bouncer walks over
       if (now - g.stateSince > tuning.troubleMaxMs) {
         g.troubleUnresolved = true;
         this.leave(g, w, state, now);
@@ -539,7 +553,7 @@ export class GuestSimulation {
 
   /** Guests near a troublemaker lose happiness (PROPOSED). */
   private applyTrouble(dt: number): void {
-    const trouble = this.guests.filter((g) => g.state === 'TROUBLEMAKER');
+    const trouble = this.guests.filter((g) => g.state === 'TROUBLEMAKER' && !g.caughtBy);
     if (!trouble.length || dt <= 0) return;
     for (const g of this.guests) {
       if (g.state === 'TROUBLEMAKER' || g.state === 'LEAVING') continue;
@@ -550,7 +564,68 @@ export class GuestSimulation {
   }
 
   private freeBouncers(state: ClubState, now: number) {
-    return state.staff.filter((s) => s.role === 'bouncer' && s.post && (this.bouncerBusyUntil.get(s.id) ?? 0) <= now);
+    return state.staff.filter((s) => s.role === 'bouncer' && s.post && !this.bouncers.get(s.id)?.target && (this.bouncerBusyUntil.get(s.id) ?? 0) <= now);
+  }
+
+  /** Bouncer position for rendering (falls back to the post). */
+  bouncerAt(staffId: string): { x: number; y: number; moving: boolean } | null {
+    const u = this.bouncers.get(staffId);
+    return u ? { x: u.x, y: u.y, moving: u.moving } : null;
+  }
+
+  /** Keep one unit per posted bouncer; drop units for workers who changed role. */
+  private syncBouncers(state: ClubState): void {
+    const live = new Set<string>();
+    for (const s of state.staff) {
+      if (s.role !== 'bouncer' || !s.post) continue;
+      live.add(s.id);
+      if (!this.bouncers.has(s.id)) this.bouncers.set(s.id, { x: s.post.col + 0.5, y: s.post.row + 0.5, path: [], target: null, moving: false });
+    }
+    for (const [id, u] of this.bouncers) {
+      if (live.has(id)) continue;
+      const g = u.target ? this.guests.find((x) => x.id === u.target) : undefined;
+      if (g) g.caughtBy = null;
+      this.bouncers.delete(id);
+    }
+  }
+
+  /** Send a bouncer after a troublemaker; if no walkable route exists, escort at once. */
+  private dispatch(host: SimHost, state: ClubState, g: Guest, staffId: string, now: number): void {
+    const u = this.bouncers.get(staffId)!;
+    const w = this.world(state);
+    const from = { col: Math.floor(u.x), row: Math.floor(u.y) };
+    const path = findPath(state.room, w.blocked, from, guestCell(g));
+    if (!path) {
+      this.eject(host, state, g, staffId, now);
+      return;
+    }
+    g.caughtBy = staffId;
+    g.path = [];
+    u.target = g.id;
+    u.path = path;
+  }
+
+  /** Move a bouncer along its path; returns true when the path is used up. */
+  private walkBouncer(u: BouncerUnit, dt: number): boolean {
+    let budget = tuning.bouncerWalkSpeed * dt;
+    while (budget > 0 && u.path.length) {
+      const next = u.path[0];
+      const tx = next.col + 0.5;
+      const ty = next.row + 0.5;
+      const d = Math.hypot(tx - u.x, ty - u.y);
+      if (d <= budget) {
+        u.x = tx;
+        u.y = ty;
+        budget -= d;
+        u.path.shift();
+      } else {
+        u.x += ((tx - u.x) / d) * budget;
+        u.y += ((ty - u.y) / d) * budget;
+        budget = 0;
+      }
+    }
+    u.moving = u.path.length > 0;
+    return u.path.length === 0;
   }
 
   /** A free bouncer whose area covers this guest, if any. */
@@ -559,16 +634,55 @@ export class GuestSimulation {
   }
 
   /** Gamezebo: "Your bouncer will handle the situation automatically within their area." */
-  private runBouncers(host: SimHost, state: ClubState, now: number): void {
+  private runBouncers(host: SimHost, state: ClubState, now: number, dt: number): void {
+    this.syncBouncers(state);
+    // New jobs: free bouncers go after troublemakers inside their area.
     for (const g of this.guests) {
-      if (g.state !== 'TROUBLEMAKER') continue;
+      if (g.state !== 'TROUBLEMAKER' || g.caughtBy) continue;
       const b = this.coveringBouncer(state, g, now);
-      if (b) this.eject(host, state, g, b.id, now);
+      if (b) this.dispatch(host, state, g, b.id, now);
+    }
+    // Walk: to the target, escort on reach, then back to the post.
+    for (const s of state.staff) {
+      const u = this.bouncers.get(s.id);
+      if (!u || !s.post) continue;
+      if (u.target) {
+        const g = this.guests.find((x) => x.id === u.target);
+        if (!g || g.state !== 'TROUBLEMAKER') {
+          u.target = null;
+          u.path = [];
+        } else if (Math.hypot(g.x - u.x, g.y - u.y) <= tuning.bouncerReach) {
+          this.eject(host, state, g, s.id, now);
+        } else {
+          this.walkBouncer(u, dt);
+          if (!u.path.length && Math.hypot(g.x - u.x, g.y - u.y) > tuning.bouncerReach) this.eject(host, state, g, s.id, now);
+          continue;
+        }
+      }
+      if (!u.target) {
+        const home = { col: s.post.col, row: s.post.row };
+        const atHome = Math.floor(u.x) === home.col && Math.floor(u.y) === home.row;
+        if (!atHome && !u.path.length) {
+          const path = findPath(state.room, this.world(state).blocked, { col: Math.floor(u.x), row: Math.floor(u.y) }, home);
+          if (path) u.path = path;
+          else {
+            u.x = home.col + 0.5;
+            u.y = home.row + 0.5;
+          }
+        }
+        this.walkBouncer(u, dt);
+      }
     }
   }
 
   private eject(host: SimHost, state: ClubState, g: Guest, staffId: string, now: number): void {
     g.escorted = true;
+    g.caughtBy = null;
+    const u = this.bouncers.get(staffId);
+    if (u) {
+      u.target = null;
+      u.path = [];
+    }
     this.bouncerBusyUntil.set(staffId, now + tuning.bouncerCooldownMs);
     host.emit({ type: 'bounced', guestId: g.id, staffId, x: g.x, y: g.y });
     this.leave(g, this.world(state), state, now);
@@ -582,10 +696,18 @@ export class GuestSimulation {
     const state = host.getState();
     const g = this.guests.find((x) => x.id === guestId);
     if (!g || g.state !== 'TROUBLEMAKER') return { ok: false, reason: "That guest isn't causing trouble" };
+    if (g.caughtBy) return { ok: false, reason: 'A bouncer is already on the way' };
     if (!state.staff.some((s) => s.role === 'bouncer')) return { ok: false, reason: 'Hire or switch a worker to Bouncer first' };
-    const b = this.freeBouncers(state, now)[0];
-    if (!b) return { ok: false, reason: 'Your bouncers are busy - try again in a moment' };
-    this.eject(host, state, g, b.id, now);
+    this.syncBouncers(state);
+    // Nearest free bouncer goes.
+    const free = this.freeBouncers(state, now);
+    if (!free.length) return { ok: false, reason: 'Your bouncers are busy - try again in a moment' };
+    const dist = (id: string) => {
+      const u = this.bouncers.get(id)!;
+      return Math.hypot(u.x - g.x, u.y - g.y);
+    };
+    const b = free.reduce((a, c) => (dist(c.id) < dist(a.id) ? c : a));
+    this.dispatch(host, state, g, b.id, now);
     return { ok: true };
   }
 
@@ -618,6 +740,7 @@ export class GuestSimulation {
     this.queues.clear();
     this.nextServeAt.clear();
     this.bouncerBusyUntil.clear();
+    this.bouncers.clear();
     this.celebGuestId = null;
     this.cache = null;
     this.lastUpdate = null;

@@ -1,6 +1,6 @@
 import type { AvatarAppearance } from '../data/appearanceCatalog';
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 /** CONFIRMED genres: GameYum guide lists club mix, hip hop, electronica, pop. */
 export const GENRES = ['club_mix', 'hiphop', 'electronic', 'pop'] as const;
@@ -74,6 +74,10 @@ export interface ClubState {
   party: { id: string; startsAt: number; endsAt: number; guests: number } | null;
   /** Party id -> number of successful parties. */
   partyHistory: Record<string, number>;
+  /** Shown top-right like the original's "Aaron's Club" (S10). */
+  clubName: string;
+  /** Celebrities marked with "Wish" on their card. */
+  celebWishes: string[];
   /** Monotonic counter for stable ids. */
   nextId: number;
   savedAt: number;

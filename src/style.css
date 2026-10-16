@@ -338,7 +338,7 @@ button {
 .tube {
   position: absolute;
   right: 12px;
-  top: 92px;
+  top: 130px;
   width: 44px;
   display: flex;
   flex-direction: column;
@@ -439,7 +439,7 @@ button {
 .now-playing {
   position: absolute;
   left: 8px;
-  bottom: 104px;
+  top: 146px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1719,45 +1719,6 @@ button {
 }
 
 /* Parties */
-.party-pill {
-  position: absolute;
-  top: calc(100% + 2px);
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 10px 2px 4px;
-  border: 2.5px solid var(--ink);
-  border-radius: 999px;
-  background: linear-gradient(180deg, #ff6bf5, #b02ccf);
-  color: #fff;
-  font: 900 12px/1 Arial, sans-serif;
-  text-shadow: var(--outline-text);
-  white-space: nowrap;
-  cursor: pointer;
-  animation: party-glow 1.2s ease-in-out infinite alternate;
-}
-
-.party-pill.met {
-  background: linear-gradient(180deg, #7dff9a, #22a548);
-}
-
-.party-pill.hidden {
-  display: none;
-}
-
-.pill-ball {
-  width: 20px;
-  height: 20px;
-  display: inline-flex;
-}
-
-@keyframes party-glow {
-  from { box-shadow: 0 0 4px rgba(255, 61, 242, 0.5); }
-  to { box-shadow: 0 0 14px rgba(0, 229, 255, 0.9); }
-}
-
 .party-now .party-name {
   font: 900 16px/1.2 'Arial Black', Arial, sans-serif;
   color: var(--gold);
@@ -2078,5 +2039,296 @@ button {
 @media (max-width: 600px) {
   .pg-stats {
     grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Top-right: club name, scores, THROW A PARTY! (S10) */
+.hud-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex: none;
+}
+
+.club-name {
+  max-width: 190px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: #fff;
+  font: 900 13px/1.3 Arial, sans-serif;
+  text-shadow: var(--outline-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: text;
+}
+
+.club-name-input {
+  width: 170px;
+  font: 700 13px/1.2 Arial, sans-serif;
+  padding: 1px 4px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+}
+
+.party-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.party-cta {
+  height: 34px;
+  padding: 0 12px;
+  border: 2.5px solid var(--ink);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #4b4f8f, #23264f 60%, #15173a);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 2px 4px rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font: 900 13px/1 'Arial Black', Arial, sans-serif;
+  text-shadow: var(--outline-text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.party-cta:hover {
+  filter: brightness(1.2);
+}
+
+.party-cta.on {
+  background: linear-gradient(180deg, #ff6bf5, #b02ccf);
+  animation: party-glow 1.2s ease-in-out infinite alternate;
+}
+
+.party-cta.met {
+  background: linear-gradient(180deg, #7dff9a, #22a548);
+}
+
+@keyframes party-glow {
+  from { box-shadow: 0 0 4px rgba(255, 61, 242, 0.5); }
+  to { box-shadow: 0 0 14px rgba(0, 229, 255, 0.9); }
+}
+
+.disco-ball {
+  width: 40px;
+  height: 40px;
+  padding: 2px;
+  border: 2.5px solid var(--ink);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #2b2e5a, #11122b);
+  cursor: pointer;
+}
+
+.disco-ball svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.disco-ball.spin svg {
+  animation: disco-spin 2s linear infinite;
+}
+
+@keyframes disco-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Now playing, top-left (S10) */
+.now-playing {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 5px 7px;
+  width: 210px;
+  border: 2.5px solid var(--ink);
+  border-radius: 10px;
+  background: var(--dark-glass);
+  cursor: default;
+}
+
+.np-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.np-text {
+  min-width: 0;
+}
+
+.now-playing .np-art {
+  width: 44px;
+  height: 44px;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.np-like,
+.np-change {
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  font: 700 11px/1 Arial, sans-serif;
+  cursor: pointer;
+}
+
+.np-like {
+  margin-top: 2px;
+  padding: 2px 6px;
+  background: #3b5bdb;
+  color: #fff;
+}
+
+.np-like.on {
+  background: #ff3d7f;
+}
+
+.np-like.hidden {
+  display: none;
+}
+
+.np-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.np-change {
+  padding: 3px 10px;
+  background: linear-gradient(180deg, #ffffff, #c8ced8);
+  color: #15121c;
+}
+
+.np-ends {
+  font-size: 11px;
+  color: #cfe8ff;
+  white-space: nowrap;
+}
+
+/* Guest card (S10): type under the name, mood word, stat icons */
+.guest-type {
+  font-weight: 900;
+}
+
+.guest-type.t-celebrity {
+  color: var(--gold);
+}
+
+.guest-type.t-troublemaker {
+  color: #ff8a8a;
+}
+
+.mood-row {
+  text-align: center;
+  margin: 2px 0;
+}
+
+.mood-word {
+  display: inline-block;
+  padding: 1px 10px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: #3fae4a;
+  font-size: 12px;
+  text-shadow: var(--outline-text);
+}
+
+.mood-word.m-enthusiastic { background: #ff8a00; }
+.mood-word.m-content { background: #2f8cf0; }
+.mood-word.m-bored { background: #7a7f8c; }
+.mood-word.m-upset,
+.mood-word.m-rowdy { background: #e0202e; }
+
+.gstats {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 3px 0;
+  font-size: 13px;
+  text-shadow: var(--outline-text);
+}
+
+.gstat {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.gstat-icon,
+.gstat-icon svg {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+}
+
+/* Celebrity cards (S10): star badge, Buy / Wish, green price */
+.celeb-star {
+  position: absolute;
+  top: -12px;
+  left: -12px;
+  z-index: 2;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 3px;
+  background: no-repeat center / contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M20 2l5.3 11.3 12.2 1.4-9 8.4 2.4 12.2L20 29.2 9.1 35.3l2.4-12.2-9-8.4 12.2-1.4z' fill='%23ffd23f' stroke='%2315121c' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E");
+  color: #3a2400;
+  font: 900 13px/1 'Arial Black', Arial, sans-serif;
+}
+
+.celeb-btns {
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  bottom: 2px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.celeb-buy,
+.celeb-wish {
+  padding: 2px 7px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  font: 900 11px/1 Arial, sans-serif;
+  color: #fff;
+  text-shadow: var(--outline-text);
+  cursor: pointer;
+}
+
+.celeb-buy {
+  background: linear-gradient(180deg, #4fd35a, #23962d);
+}
+
+.celeb-buy:disabled {
+  filter: grayscale(1);
+  opacity: 0.7;
+  cursor: default;
+}
+
+.celeb-wish {
+  background: linear-gradient(180deg, #5aa0ff, #2f6ad0);
+}
+
+.celeb-wish.on {
+  background: linear-gradient(180deg, #ff6b9d, #d02f68);
+}
+
+.celeb-card .celeb-price {
+  color: #57ff6a;
+  font-weight: 900;
+}
+
+@media (max-width: 520px) {
+  .now-playing {
+    top: 190px;
+    width: 180px;
+  }
+  .hud-right {
+    order: 3;
   }
 }

@@ -76,6 +76,8 @@ export const MIGRATIONS: Record<number, Migration> = {
   },
   /** v5 -> v6: parties. */
   5: (raw) => ({ ...structuredClone(raw), party: null, partyHistory: {} }),
+  /** v6 -> v7: club name and celebrity wishes. */
+  6: (raw) => ({ ...structuredClone(raw), clubName: 'My Club', celebWishes: [] }),
 };
 
 export type MigrateResult = { ok: true; data: Record<string, unknown> } | { ok: false; reason: string };
