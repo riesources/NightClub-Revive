@@ -4,6 +4,8 @@ import { tuning } from '../../data/tuning';
 import { CELEB_SPEND_EVERY_MS, getCelebrity } from '../../data/celebrities';
 import { chargeCover, serveDrink } from '../bar';
 import { celebrityPhase, finishCelebrityVisit } from '../celebrity';
+import { getParty } from '../../data/parties';
+import { finishParty, partyActive } from '../party';
 import { creditIncome } from '../progression';
 import { adjustPopularity, clone, computeLuxury, guestCapacity } from '../club';
 import { isPlaying } from '../dj';
@@ -32,7 +34,8 @@ export type SimEvent =
   | { type: 'bounced'; guestId: string; staffId: string; x: number; y: number }
   | { type: 'troubleUnresolved'; guestId: string }
   | { type: 'celebArrived'; celebId: string; guestId: string }
-  | { type: 'celebLeft'; celebId: string; bonus: number };
+  | { type: 'celebLeft'; celebId: string; bonus: number }
+  | { type: 'partyEnded'; success: boolean; rewardCash: number; rewardPopularity: number };
 
 interface WorldCache {
   state: ClubState;
@@ -145,7 +148,8 @@ export class GuestSimulation {
   private spawnInterval(state: ClubState, now: number): number {
     const popFactor = 200 / (200 + state.popularity);
     const music = isPlaying(state, now) ? 1 : 2.5;
-    return Math.max(tuning.guestMinSpawnIntervalMs, tuning.guestSpawnIntervalMs * popFactor * music);
+    const rush = partyActive(state, now) ? (getParty(state.party!.id)?.rush ?? 1) : 1;
+    return Math.max(tuning.guestMinSpawnIntervalMs / rush, (tuning.guestSpawnIntervalMs * popFactor * music) / rush);
   }
 
   update(host: SimHost, now: number): void {
@@ -156,7 +160,7 @@ export class GuestSimulation {
 
     if (this.spawnEnabled && now >= this.nextSpawnAt && this.guests.length < guestCapacity(state)) {
       const g = this.spawn(state, now);
-      const cover = chargeCover(state);
+      const cover = chargeCover(state, now);
       g.spent += cover.paid;
       host.commit(cover.state);
       state = cover.state;
@@ -179,6 +183,13 @@ export class GuestSimulation {
     }
 
     state = this.updateCelebrity(host, now);
+    const ended = finishParty(state, now);
+    if (ended) {
+      host.commit(ended.state);
+      state = ended.state;
+      host.emit({ type: 'partyEnded', success: ended.success, rewardCash: ended.rewardCash, rewardPopularity: ended.rewardPopularity });
+      if (ended.leveledUp) host.emit({ type: 'levelUp', level: ended.level, reward: 0 });
+    }
     this.applyTrouble(dt);
     this.runBouncers(host, state, now);
     state = this.serveBars(host, now);

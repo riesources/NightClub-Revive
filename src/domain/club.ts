@@ -32,6 +32,8 @@ export function createNewClub(now = Date.now()): ClubState {
     tutorialDismissed: false,
     celebrityWall: {},
     celebrity: null,
+    party: null,
+    partyHistory: {},
     nextId: 1,
     savedAt: now,
   };

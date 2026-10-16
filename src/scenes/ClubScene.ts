@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import { getFurnitureDef } from '../data/furnitureCatalog';
+import { getParty } from '../data/parties';
 import { tuning } from '../data/tuning';
 import { isPlaying } from '../domain/dj';
+import { partyActive } from '../domain/party';
 import type { Game, GameEvent } from '../domain/game';
 import { moodOf, type Guest } from '../domain/guests/guest';
 import { blockedCells, checkPlacement, entranceCell, footprintSize, furnitureAt, reservedCells } from '../domain/grid';
@@ -29,6 +31,7 @@ export class ClubScene extends Phaser.Scene {
   private cfg: IsoConfig = DEFAULT_ISO;
   private floor!: Phaser.GameObjects.Graphics;
   private overlay!: Phaser.GameObjects.Graphics;
+  private partyGfx!: Phaser.GameObjects.Graphics;
   private furnGfx = new Map<string, Phaser.GameObjects.Graphics>();
   private guestGfx = new Map<string, Phaser.GameObjects.Graphics>();
   private debugText = new Map<string, Phaser.GameObjects.Text>();
@@ -52,6 +55,8 @@ export class ClubScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#07081a');
     this.floor = this.add.graphics().setDepth(DEPTH_FLOOR);
     this.overlay = this.add.graphics().setDepth(DEPTH_UI - 10);
+    // Party lights sit above the floor tiles but under furniture and people.
+    this.partyGfx = this.add.graphics().setDepth(-1000).setBlendMode(Phaser.BlendModes.ADD);
     this.djAvatar = this.add.graphics();
     this.redrawRoom(true);
     this.centerCamera();
@@ -314,7 +319,32 @@ export class ClubScene extends Phaser.Scene {
     this.drawGuests(now, playing);
     this.drawDj(state, now, playing);
     this.drawStaff(state, now);
+    this.drawPartyLights(state, now);
     this.drawOverlay(state);
+  }
+
+  /** Sweeping coloured spotlights while a party runs (original effect). */
+  private drawPartyLights(state: ClubState, now: number): void {
+    const g = this.partyGfx;
+    g.clear();
+    const def = state.party ? getParty(state.party.id) : undefined;
+    if (!def || !partyActive(state, now)) return;
+    const { cols, rows } = state.room;
+    const t = now / 1000;
+    const tw = this.cfg.tileW;
+    def.lights.forEach((color, i) => {
+      for (let k = 0; k < 2; k++) {
+        const ph = i * 2.1 + k * 3.7;
+        const col = cols / 2 + (cols / 2 - 1) * Math.sin(t * (0.45 + 0.1 * i) + ph);
+        const row = rows / 2 + (rows / 2 - 1) * Math.sin(t * (0.33 + 0.07 * k) + ph * 1.3);
+        const p = gridToScreen(col, row, this.cfg);
+        const r = tw * (1.1 + 0.25 * Math.sin(t * 2 + ph));
+        g.fillStyle(color, 0.16);
+        g.fillEllipse(p.x, p.y, r * 2, r);
+        g.fillStyle(color, 0.22);
+        g.fillEllipse(p.x, p.y, r * 1.1, r * 0.55);
+      }
+    });
   }
 
   private drawFurniture(state: ClubState, pulse: number): void {

@@ -74,6 +74,8 @@ export const MIGRATIONS: Record<number, Migration> = {
     if (Array.isArray(d.staff)) d.staff = (d.staff as Record<string, unknown>[]).map((s) => ({ ...s, mode: 'speed' }));
     return d;
   },
+  /** v5 -> v6: parties. */
+  5: (raw) => ({ ...structuredClone(raw), party: null, partyHistory: {} }),
 };
 
 export type MigrateResult = { ok: true; data: Record<string, unknown> } | { ok: false; reason: string };

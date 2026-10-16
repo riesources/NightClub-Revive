@@ -1,5 +1,6 @@
 import { isValidAppearance } from '../data/appearanceCatalog';
 import { getCelebrity } from '../data/celebrities';
+import { getParty } from '../data/parties';
 import { getFurnitureDef } from '../data/furnitureCatalog';
 import { checkPlacement } from '../domain/grid';
 import { GENRES, SCHEMA_VERSION, type ClubState } from '../domain/types';
@@ -27,6 +28,11 @@ export function validateState(d: Record<string, unknown>): { ok: true; state: Cl
   for (const [k, v] of Object.entries(wall)) if (!getCelebrity(k) || !isInt(v, 1)) return bad('Invalid celebrity wall entry');
   const celeb = d.celebrity as ClubState['celebrity'];
   if (celeb !== null && (!celeb || !getCelebrity(celeb.id) || !isNum(celeb.arrivesAt) || !isNum(celeb.leavesAt) || celeb.leavesAt < celeb.arrivesAt)) return bad('Invalid celebrity booking');
+  const party = d.party as ClubState['party'];
+  if (party !== null && (!party || !getParty(party.id) || !isNum(party.startsAt) || !isNum(party.endsAt) || party.endsAt < party.startsAt || !isInt(party.guests))) return bad('Invalid party');
+  const hist = d.partyHistory as Record<string, unknown>;
+  if (!hist || typeof hist !== 'object' || Array.isArray(hist)) return bad('Invalid party history');
+  for (const [k, v] of Object.entries(hist)) if (!getParty(k) || !isInt(v, 1)) return bad('Invalid party history entry');
   if (!isNum(d.savedAt)) return bad('Invalid savedAt');
   const dj = d.dj as ClubState['dj'];
   if (!dj || !GENRES.includes(dj.genre) || !isTsOrNull(dj.setStartedAt) || !isTsOrNull(dj.setEndsAt) || !isTsOrNull(dj.lastDropBassAt) || !isTsOrNull(dj.lastDedicateAt))

@@ -1,4 +1,6 @@
 import { getFurnitureDef } from '../data/furnitureCatalog';
+import { getParty } from '../data/parties';
+import { countPartyGuest } from './party';
 import { tuning } from '../data/tuning';
 import { clone } from './club';
 import { creditIncome } from './progression';
@@ -38,9 +40,11 @@ export function coverCharge(popularity: number): number {
   return tuning.coverChargeBase + Math.floor(popularity * tuning.coverChargePerPopularity);
 }
 
-export function chargeCover(state: ClubState): { state: ClubState; paid: number; leveledUp: boolean; reward: number } {
+export function chargeCover(state: ClubState, now = Date.now()): { state: ClubState; paid: number; leveledUp: boolean; reward: number } {
   const draft = clone(state);
-  const paid = coverCharge(state.popularity);
+  const party = state.party && now < state.party.endsAt ? getParty(state.party.id) : undefined;
+  const paid = Math.round(coverCharge(state.popularity) * (party?.coverMultiplier ?? 1));
+  countPartyGuest(draft, now);
   const { leveledUp, reward } = creditIncome(draft, paid);
   return { state: draft, paid, leveledUp, reward };
 }
