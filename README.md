@@ -62,6 +62,20 @@ npm run typecheck  # TypeScript check
 npm run smoke      # headless browser smoke test (run npm run build first)
 ```
 
+## Built with
+
+The game is written in **TypeScript** and runs in any modern web browser.
+
+- **Game engine: Phaser 3.** This draws the isometric club, moves the guests around and handles mouse input.
+- **Interface: HTML and CSS.** The panels, cards, buttons and HUD are ordinary web page elements laid over the game. The icons are SVG drawings written directly in the code.
+- **Graphics: drawn in code.** There are no image files. Characters and furniture are made of shapes in TypeScript, using Phaser for the club and the browser's built-in drawing canvas for the menu pictures.
+- **Music: the Web Audio API.** The browser's built-in sound system generates the drums, bass and chords live.
+- **Tools:**
+  - Vite runs the development server and builds the finished game.
+  - Vitest runs the unit tests.
+  - Playwright runs the automated tests in a real browser.
+  - Node.js and npm install and run all of these.
+
 ## What works
 
 - The original-style HUD: portrait, level and XP, DJ quick buttons with timer, gold cash, POPULARITY/LUXURY badges, drink tube, now playing, and the character dock.
