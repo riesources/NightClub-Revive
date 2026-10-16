@@ -1,0 +1,25 @@
+{
+  "name": "nightclub-revive",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Unofficial fan reconstruction of the 2010 Facebook game Nightclub City",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.52.0",
+    "typescript": "5.8.3",
+    "vite": "6.3.5",
+    "vitest": "3.2.4"
+  },
+  "dependencies": {
+    "phaser": "3.90.0"
+  }
+}

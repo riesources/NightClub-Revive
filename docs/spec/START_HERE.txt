@@ -7,5 +7,8 @@ Recommended way to use this with Claude Opus 5.5:
 3. Paste the complete contents of Claude_Opus_5_5_Master_Build_Prompt.md as your first instruction.
 4. Let Claude inspect the workspace and sources, create its evidence/audit documents, and start implementing the P0 playable vertical slice. Ask it to run the project and tests instead of merely returning code snippets.
 5. Keep the blueprint, evidence register, asset register and build log in the project so later sessions can continue consistently.
+6. Human task: contact the Reddit preservation poster yourself about possible collaboration; an agent cannot do this.
+
+Note: the Markdown files in this folder were corrected after an audit (see docs/RECONSTRUCTION_AUDIT.md). The PDF is the ORIGINAL, uncorrected copy and also clips long URLs; treat the Markdown as canonical.
 
 The plan targets a standalone browser reconstruction of the original Facebook/browser Nightclub City experience, not Roblox. It distinguishes supported historical features from assumptions and proposed tuning values. Exact original assets/code have not been recovered for this project, so the plan does not promise a perfect byte-for-byte restoration.
