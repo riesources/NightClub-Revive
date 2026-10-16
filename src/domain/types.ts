@@ -1,6 +1,6 @@
 import type { AvatarAppearance } from '../data/appearanceCatalog';
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 /** CONFIRMED genres: GameYum guide lists club mix, hip hop, electronica, pop. */
 export const GENRES = ['club_mix', 'hiphop', 'electronic', 'pop'] as const;
@@ -70,6 +70,10 @@ export interface ClubState {
   celebrityWall: Record<string, number>;
   /** The booked celebrity, if any. Absolute timestamps so reloads stay consistent. */
   celebrity: { id: string; arrivesAt: number; leavesAt: number } | null;
+  /** The running party, if any (absolute timestamps; guest count persists). */
+  party: { id: string; startsAt: number; endsAt: number; guests: number } | null;
+  /** Party id -> number of successful parties. */
+  partyHistory: Record<string, number>;
   /** Monotonic counter for stable ids. */
   nextId: number;
   savedAt: number;

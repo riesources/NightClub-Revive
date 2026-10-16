@@ -1,5 +1,26 @@
 # Build Log
 
+## 2026-10-16 — Parties
+
+**Added**
+- A **Party** button on the dock opens a party planner with 4 **original** themes: Neon Night (level 1), Retro Roller Disco (2), Velvet Rope VIP Night (4) and Foam Frenzy (6). Hosting parties is part of the original; the old theme names in descriptions are UNVERIFIED, so none are reused.
+- Each party costs an entry fee and runs for 3–5 minutes on absolute timestamps. While it runs:
+  - guests arrive 2–3× faster,
+  - some parties raise the cover charge (×1.5 to ×3),
+  - coloured spotlights sweep the floor,
+  - a pill under the cash shows the countdown and `guests / goal`.
+- Hit the guest goal before the timer ends to win cash and popularity. Missing it pays nothing; the fee is not refunded. Successful parties are counted on each card.
+- The party is settled exactly once, even if the page is reloaded long after it ended (no offline simulation, per D3).
+- Schema v6 adds `party` and `partyHistory`, with a v5→v6 migration.
+- All numbers are PROPOSED in `src/data/parties.ts`.
+
+**Commands run and results**
+- `npx vitest run`: 90/90 passed (8 new party tests, including a seeded simulation showing more arrivals during a party).
+- `npm run build`: passes.
+- `node scripts/smoke.mjs`: 21/21 passed twice (new check: the planner starts Neon Night, charges $500 once and shows the HUD pill).
+- Real-app screenshots reviewed: party planner, party lights in the club, HUD pill.
+
+
 ## 2026-10-16 — Bartender modes and drink tanks
 
 **Added**

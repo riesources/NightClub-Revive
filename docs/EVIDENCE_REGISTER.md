@@ -82,5 +82,6 @@ Reference screenshots were downloaded for **visual reference only**. They are co
 | Drink capacity raised by tanks | SOURCED (1) | S2 | `drink_tank` item, `stockCapacity` (base 200 + 100 per tank, PROPOSED) |
 | Celebrities: book (expensive), short visit, big spend, celebrity wall, level-gated cards | CONFIRMED | S2, S3, S8 | `data/celebrities.ts` (original fictional VIPs, numbers PROPOSED), `domain/celebrity.ts`, `GuestSimulation.updateCelebrity` |
 | Music was licensed commercial tracks | CONFIRMED | S7, S8 | **Replaced** by original procedural loops (`audio/music.ts`) |
-| Party theme names | UNVERIFIED | — | Not used |
+| Party theme names | UNVERIFIED | — | Not used; 4 original themes instead (`data/parties.ts`) |
+| Hosting parties | SOURCED (brief) / rules PROPOSED | Spec brief | `domain/party.ts`: fee, timed rush, guest goal, reward. No source gives the original rules or numbers |
 | Tile size / exact proportions | PROPOSED (2:1 iso) | — | `DEFAULT_ISO` |

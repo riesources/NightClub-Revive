@@ -161,6 +161,24 @@ try {
   await page.screenshot({ path: `${SHOTS}/06b-celebrities.png` });
   await page.click('.celeb-panel .btn.corner');
 
+  // Parties: planner opens from the dock, starts Neon Night, HUD pill appears
+  await page.evaluate(() => {
+    const { game } = window.__ncr;
+    game.replaceState({ ...game.state, cash: game.state.cash + 1000 });
+  });
+  await click('.dock-btn[data-id="party"]');
+  const pBefore = await page.evaluate(() => ({ cash: window.__ncr.game.state.cash, earned: window.__ncr.game.state.totalEarned }));
+  await click('.party-card[data-party="neon_night"] >> .btn');
+  const pAfter = await page.evaluate(() => ({ p: window.__ncr.game.state.party?.id, cash: window.__ncr.game.state.cash, earned: window.__ncr.game.state.totalEarned }));
+  const pCharged = pBefore.cash - pAfter.cash + (pAfter.earned - pBefore.earned);
+  await page.waitForTimeout(1200);
+  const pill = await page.locator('.party-pill:not(.hidden)').count();
+  check('Party planner starts a party, charges once, shows the HUD pill', pAfter.p === 'neon_night' && pCharged === 500 && pill === 1, `charged $${pCharged}, pill ${pill}`);
+  await page.screenshot({ path: `${SHOTS}/06c-party.png` });
+  await page.click('.party-panel .btn.corner');
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: `${SHOTS}/06d-party-club.png` });
+
   // Save -> reload -> compare. Freeze the simulation first: guests keep paying
   // cover/drinks, which would otherwise change state between snapshot and reload.
   await page.evaluate(() => {

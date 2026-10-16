@@ -1,6 +1,8 @@
 import { MIX_LABELS, type MusicPlayer } from '../audio/music';
 import { CELEBRITIES, getCelebrity } from '../data/celebrities';
 import { celebrityPhase } from '../domain/celebrity';
+import { PARTIES, getParty } from '../data/parties';
+import { partyActive } from '../domain/party';
 import { CATEGORY_LABELS, FURNITURE, getFurnitureDef, type FurnitureCategory } from '../data/furnitureCatalog';
 import { LEVEL_TITLES, WORKER_SLOT_LEVELS } from '../data/progression';
 import { tuning } from '../data/tuning';
@@ -169,6 +171,10 @@ export class UI {
       case 'celebLeft':
         this.toast(`${getCelebrity(e.celebId)?.name} loved your club! Popularity +${e.bonus}`, 'good', 4000);
         break;
+      case 'partyEnded':
+        if (e.success) this.toast(`Party goal reached! +$${fmt(e.rewardCash)}, popularity +${e.rewardPopularity}`, 'good', 5000);
+        else this.toast('The party is over, but it missed its guest goal. No reward this time.', 'error', 5000);
+        break;
     }
   }
 
@@ -200,11 +206,13 @@ export class UI {
     r.xpTitle = h('div', { class: 'xp-title' });
     // Top-centre cash, top-right scores
     r.cash = h('div', { class: 'cash-text' });
+    r.partyText = h('span', {});
+    r.partyPill = h('button', { class: 'party-pill hidden', title: 'Party in progress', onclick: () => this.openParties() }, icon(ICONS.party, 'pill-ball'), r.partyText);
     r.pop = h('div', { class: 'score-num' });
     r.lux = h('div', { class: 'score-num' });
     this.top.append(
       h('div', { class: 'player' }, r.portrait, r.level, h('div', { class: 'xp' }, h('div', { class: 'xp-bar' }, r.xpFill, r.xpText), r.xpTitle)),
-      h('div', { class: 'cash', title: 'Cash' }, icon(ICONS.money, 'money-icon'), r.cash),
+      h('div', { class: 'cash', title: 'Cash' }, icon(ICONS.money, 'money-icon'), r.cash, r.partyPill),
       h(
         'div',
         { class: 'scores' },
@@ -260,6 +268,7 @@ export class UI {
         dockBtn(ICONS.workers, 'Workers', 'workers', () => this.openWorkers()),
         dockBtn(ICONS.build, 'Decorate', 'build', () => this.openBuild()),
         dockBtn(ICONS.celebs, 'Celebrities', 'celebs', () => this.openCelebrities()),
+        dockBtn(ICONS.party, 'Party', 'party', () => this.openParties()),
       ),
     );
   }
@@ -287,6 +296,20 @@ export class UI {
       r.portrait.replaceChildren(portrait(s.appearance, 64));
     }
     this.renderDjStatus();
+    this.renderPartyPill();
+  }
+
+  private renderPartyPill(): void {
+    const s = this.game.state;
+    const pill = this.refs.partyPill;
+    const now = Date.now();
+    const def = s.party ? getParty(s.party.id) : undefined;
+    const on = !!def && partyActive(s, now);
+    pill.classList.toggle('hidden', !on);
+    if (!on || !def) return;
+    const text = `${mmss(s.party!.endsAt - now)} · ${s.party!.guests}/${def.goalGuests} guests`;
+    if (this.refs.partyText.textContent !== text) this.refs.partyText.textContent = text;
+    pill.classList.toggle('met', s.party!.guests >= def.goalGuests);
   }
 
   private renderDjStatus(): void {
@@ -738,6 +761,115 @@ export class UI {
       const st = el.querySelector('.celeb-status');
       const b = s.celebrity;
       if (st && b) st.textContent = phase === 'coming' ? `Arriving in ${Math.ceil((b.arrivesAt - now) / 1000)}s` : phase === 'here' ? `In your club for ${mmss(b.leavesAt - now)}` : 'Saying goodbye...';
+    }, 1000);
+    document.body.append(el);
+  }
+
+  /**
+   * Party planner. Hosting parties is part of the original; the themes,
+   * numbers and layout here are ORIGINAL/PROPOSED (no screenshot of it found).
+   */
+  private openParties(): void {
+    const body = h('div', {});
+    const status = (now: number) => {
+      const run = this.game.state.party;
+      const def = run ? getParty(run.id) : undefined;
+      if (!run || !def) return '';
+      return now < run.endsAt ? `${mmss(run.endsAt - now)} left · ${run.guests} / ${def.goalGuests} guests` : 'Wrapping up...';
+    };
+    const render = () => {
+      const s = this.game.state;
+      const now = Date.now();
+      const run = s.party;
+      const cur = run ? getParty(run.id) : undefined;
+      const pct = run && cur ? Math.min(100, (run.guests / cur.goalGuests) * 100) : 0;
+      const top = cur
+        ? h(
+            'div',
+            { class: 'party-now' },
+            h('div', { class: 'party-name' }, `${cur.name} is on!`),
+            h('div', { class: 'party-status' }, status(now)),
+            h('div', { class: 'party-bar' }, h('div', { class: 'party-bar-fill', style: `width:${pct}%` })),
+            h('div', { class: 'party-reward' }, `Goal reward: $${fmt(cur.rewardCash)} and popularity +${cur.rewardPopularity}`),
+          )
+        : h('div', { class: 'celeb-empty' }, 'No party right now. Pick one below: guests pour in while it runs.');
+      const cards = PARTIES.map((p) => {
+        const locked = s.level < p.requiredLevel;
+        const done = s.partyHistory[p.id] ?? 0;
+        return h(
+          'div',
+          { class: `party-card${locked ? ' locked' : ''}`, 'data-party': p.id },
+          done ? h('div', { class: 'celeb-visits', title: 'Successful parties' }, `Won ×${done}`) : null,
+          h('div', { class: 'party-swatch', style: `background:linear-gradient(135deg,${p.lights.map((c) => `#${c.toString(16).padStart(6, '0')}`).join(',')})` }, locked ? icon(ICONS.lock, 'item-lock') : icon(ICONS.party, 'party-ball')),
+          h('div', { class: 'celeb-name' }, p.name),
+          h('div', { class: 'party-blurb' }, p.blurb),
+          h('div', { class: 'celeb-level' }, `Level ${p.requiredLevel}`),
+          h(
+            'ul',
+            { class: 'party-facts' },
+            h('li', {}, `${mmss(p.durationMs)} long, guests ×${p.rush}`),
+            p.coverMultiplier !== 1 ? h('li', {}, `Cover charge ×${p.coverMultiplier}`) : null,
+            h('li', {}, `Goal: ${p.goalGuests} guests`),
+            h('li', {}, `Reward: $${fmt(p.rewardCash)}, pop +${p.rewardPopularity}`),
+          ),
+          locked
+            ? h('div', { class: 'celeb-price' }, `$${fmt(p.cost)}`)
+            : h(
+                'button',
+                {
+                  class: 'btn ok tiny',
+                  disabled: !!run || s.cash < p.cost,
+                  title: run ? 'One party at a time' : s.cash < p.cost ? 'Not enough cash' : `Throw it for $${fmt(p.cost)}`,
+                  onclick: () => {
+                    if (this.game.startParty(p.id).ok) render();
+                  },
+                },
+                `Start $${fmt(p.cost)}`,
+              ),
+        );
+      });
+      body.replaceChildren(h('div', { class: 'celeb-town' }, h('div', { class: 'celeb-town-title' }, 'Tonight:'), top), h('div', { class: 'celeb-cards' }, ...cards));
+    };
+    const el = h(
+      'div',
+      { class: 'modal-backdrop' },
+      h(
+        'div',
+        { class: 'modal panel-tabbed celeb-panel party-panel', role: 'dialog', 'aria-label': 'Parties' },
+        h('div', { class: 'tab-label' }, icon(ICONS.party, 'tab-icon'), 'Parties'),
+        h(
+          'button',
+          {
+            class: 'btn ok corner',
+            onclick: () => {
+              clearInterval(timer);
+              el.remove();
+            },
+          },
+          'OK',
+        ),
+        body,
+        h('div', { class: 'placeholder-note' }, 'Party themes are original. Get enough guests through the door before the timer runs out to win the reward. The entry fee is not refunded.'),
+      ),
+    );
+    render();
+    // Status text and the progress bar tick in place; the cards rebuild only
+    // when a party starts or ends, so a click on "Start" is never lost.
+    let lastKey = JSON.stringify([this.game.state.party?.id ?? null, this.game.state.level]);
+    const timer = setInterval(() => {
+      if (!document.body.contains(el)) return clearInterval(timer);
+      const s = this.game.state;
+      const key = JSON.stringify([s.party?.id ?? null, s.level]);
+      if (key !== lastKey) {
+        lastKey = key;
+        render();
+        return;
+      }
+      const st = el.querySelector('.party-status');
+      if (st) st.textContent = status(Date.now());
+      const fill = el.querySelector<HTMLElement>('.party-bar-fill');
+      const def = s.party ? getParty(s.party.id) : undefined;
+      if (fill && def) fill.style.width = `${Math.min(100, (s.party!.guests / def.goalGuests) * 100)}%`;
     }, 1000);
     document.body.append(el);
   }
