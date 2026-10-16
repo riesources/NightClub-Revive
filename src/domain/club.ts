@@ -49,7 +49,7 @@ export function createNewClub(now = Date.now()): ClubState {
   for (let c = 0; c <= 3; c++) for (let r = 1; r <= 3; r++) add('floor_neon_blue', c, r);
   const bar = add('bar_basic', 8, 0);
   // PROPOSED: start with one bartender (Gamezebo advises hiring one early; we pre-hire to keep P0 playable).
-  state.staff.push({ id: newId(state, 's'), role: 'bartender', name: 'Rico', barId: bar.id, post: null });
+  state.staff.push({ id: newId(state, 's'), role: 'bartender', name: 'Rico', barId: bar.id, post: null, mode: 'speed' });
   return state;
 }
 

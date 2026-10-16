@@ -1,6 +1,6 @@
 import type { AvatarAppearance } from '../data/appearanceCatalog';
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /** CONFIRMED genres: GameYum guide lists club mix, hip hop, electronica, pop. */
 export const GENRES = ['club_mix', 'hiphop', 'electronic', 'pop'] as const;
@@ -37,6 +37,8 @@ export interface StaffMember {
   barId: string | null;
   /** Bouncers only: the tile they stand on; they cover an area around it. */
   post: GridPoint | null;
+  /** Bartenders only: 'tricks' = bigger tips, 'speed' = faster service (CONFIRMED options). */
+  mode: 'speed' | 'tricks';
 }
 
 export interface DJState {

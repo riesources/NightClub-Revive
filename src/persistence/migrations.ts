@@ -68,6 +68,12 @@ export const MIGRATIONS: Record<number, Migration> = {
   },
   /** v3 -> v4: celebrity wall and booking. */
   3: (raw) => ({ ...structuredClone(raw), celebrityWall: {}, celebrity: null }),
+  /** v4 -> v5: bartenders gain a mode; existing staff keep normal pace ('speed'). */
+  4: (raw) => {
+    const d = structuredClone(raw) as Record<string, unknown>;
+    if (Array.isArray(d.staff)) d.staff = (d.staff as Record<string, unknown>[]).map((s) => ({ ...s, mode: 'speed' }));
+    return d;
+  },
 };
 
 export type MigrateResult = { ok: true; data: Record<string, unknown> } | { ok: false; reason: string };

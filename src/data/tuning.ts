@@ -42,6 +42,15 @@ export const tuning = {
   barRefillCost: 300,
   /** PROPOSED: maximum stock without extra tanks. */
   barStockCapacity: 200,
+  /** PROPOSED: capacity added by each drink tank (GameYum: tanks raise capacity - CONFIRMED concept). */
+  barTankCapacity: 100,
+  /**
+   * Bartender modes (GameYum: a "trick" option earns bigger tips, a speed option
+   * serves at double speed - CONFIRMED). Tricks also take a little longer (PROPOSED).
+   */
+  tricksTipMultiplier: 2,
+  tricksServeMultiplier: 1.5,
+  speedServeMultiplier: 0.5,
   /** PROPOSED */
   startingDrinkStock: 100,
   /** PROPOSED: how long a bartender takes per drink. */

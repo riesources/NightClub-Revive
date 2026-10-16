@@ -5,6 +5,7 @@ import { CATEGORY_LABELS, FURNITURE, getFurnitureDef, type FurnitureCategory } f
 import { LEVEL_TITLES, WORKER_SLOT_LEVELS } from '../data/progression';
 import { tuning } from '../data/tuning';
 import type { AvatarAppearance } from '../data/appearanceCatalog';
+import { stockCapacity } from '../domain/bar';
 import { computeLuxury } from '../domain/club';
 import * as dj from '../domain/dj';
 import { features, sellRefund } from '../domain/economy';
@@ -275,9 +276,10 @@ export class UI {
     r.cash.textContent = `$${fmt(s.cash)}`;
     r.pop.textContent = fmt(s.popularity);
     r.lux.textContent = fmt(computeLuxury(s));
-    const pct = Math.round((s.stock.drinks / tuning.barStockCapacity) * 100);
+    const cap = stockCapacity(s);
+    const pct = Math.round((s.stock.drinks / cap) * 100);
     r.tubeFill.style.height = `${pct}%`;
-    r.tubeText.textContent = String(s.stock.drinks);
+    r.tubeText.textContent = `${s.stock.drinks}/${cap}`;
     this.tube.classList.toggle('low', s.stock.drinks <= 20);
     const key = JSON.stringify(s.appearance);
     if (key !== this.portraitKey) {
@@ -408,7 +410,7 @@ export class UI {
         const extra: HTMLElement[] = [];
         if (def.kind === 'bar') {
           const bt = bartenderForBar(s, f.id);
-          extra.push(h('div', { class: 'card-line' }, bt ? `Bartender: ${bt.name}` : 'No bartender - assign one in Workers'));
+          extra.push(h('div', { class: 'card-line' }, bt ? `Bartender: ${bt.name} (${bt.mode === 'tricks' ? 'Tricks' : 'Speed'})` : 'No bartender - assign one in Workers'));
           extra.push(h('div', { class: 'card-line' }, 'Waiting: ', live(String(this.game.sim.queues.get(f.id)?.length ?? 0))));
         }
         nodes = this.cardShell(furnitureThumb(def, 92), def.name, `Luxury: ${def.luxury}`, [
@@ -778,6 +780,28 @@ export class UI {
                   'Set Post',
                 )
               : h(
+              'div',
+              { class: 'w-bartender' },
+              h(
+                'div',
+                { class: 'w-modes', role: 'group', 'aria-label': `${m.name}'s style` },
+                ...(['tricks', 'speed'] as const).map((mode) =>
+                  h(
+                    'button',
+                    {
+                      class: `w-mode${m.mode === mode ? ' active' : ''}`,
+                      'aria-pressed': m.mode === mode ? 'true' : 'false',
+                      title: mode === 'tricks' ? `Tricks: ${tuning.tricksTipMultiplier}x tips, slightly slower` : 'Speed: serves twice as fast',
+                      onclick: () => {
+                        this.game.setBartenderMode(m.id, mode);
+                        render();
+                      },
+                    },
+                    mode === 'tricks' ? 'Tricks' : 'Speed',
+                  ),
+                ),
+              ),
+              h(
               'select',
               {
                 class: 'w-assign',
@@ -789,6 +813,7 @@ export class UI {
               },
               h('option', { value: '', selected: m.barId === null }, 'Not working'),
               ...bars.map((b) => h('option', { value: b.id, selected: m.barId === b.id }, `${getFurnitureDef(b.catalogId)!.name} (${b.col},${b.row})`)),
+            ),
             ),
           );
         }

@@ -141,6 +141,6 @@ describe('v2 -> v3 migration', () => {
     store.setItem(SAVE_KEY, JSON.stringify(v2));
     const r = new LocalSaveRepository(store).load();
     expect(r.status).toBe('ok');
-    if (r.status === 'ok') expect(r.state.staff[0]).toEqual({ id: 's1', role: 'bartender', name: 'Rico', barId: null, post: null });
+    if (r.status === 'ok') expect(r.state.staff[0]).toEqual({ id: 's1', role: 'bartender', name: 'Rico', barId: null, post: null, mode: 'speed' });
   });
 });

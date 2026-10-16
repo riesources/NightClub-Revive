@@ -35,6 +35,7 @@ npm run smoke       # needs a prior build; drives the real app in headless Chrom
 | DJ card, guest card and Workers panel work through real clicks | smoke |
 | Bouncers: role switch, posts, auto-eject in area, Send Bouncer + cooldown, unhandled-trouble penalty, nearby happiness drain, v2→v3 migration | `bouncers.test.ts`, smoke |
 | Celebrities: booking rules, full visit (arrive/spend/leave/wall), no double payout after reload, v3→v4 migration, panel booking | `celebrities.test.ts`, smoke |
+| Bartender modes + drink tanks: capacity, refill cap, sell clamp, mode effects, Speed vs Tricks sim, v4→v5 migration, Workers toggle | `barModes.test.ts`, smoke |
 | Tutorial stays dismissed after reload | smoke |
 | No console errors | smoke |
 

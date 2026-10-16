@@ -1,15 +1,23 @@
+import { getFurnitureDef } from '../data/furnitureCatalog';
 import { tuning } from '../data/tuning';
 import { clone } from './club';
 import { creditIncome } from './progression';
 import { fail, ok, type ClubState, type Result } from './types';
 
+/** Drink capacity: base plus each placed drink tank (GameYum: tanks raise capacity). */
+export function stockCapacity(state: ClubState): number {
+  const tanks = state.furniture.filter((f) => getFurnitureDef(f.catalogId)?.kind === 'tank').length;
+  return tuning.barStockCapacity + tanks * tuning.barTankCapacity;
+}
+
 /** Restock: CONFIRMED +100 drinks per refill (Gamezebo). Cost and cap PROPOSED. */
 export function refillDrinks(state: ClubState): Result {
-  if (state.stock.drinks >= tuning.barStockCapacity) return fail('Drink supply is full');
+  const cap = stockCapacity(state);
+  if (state.stock.drinks >= cap) return fail('Drink supply is full');
   if (state.cash < tuning.barRefillCost) return fail('Not enough cash to restock');
   const draft = clone(state);
   draft.cash -= tuning.barRefillCost;
-  draft.stock.drinks = Math.min(tuning.barStockCapacity, draft.stock.drinks + tuning.barRefillAmount);
+  draft.stock.drinks = Math.min(cap, draft.stock.drinks + tuning.barRefillAmount);
   return ok(draft);
 }
 
@@ -43,7 +51,7 @@ export type ServeResult = { ok: true; state: ClubState; paid: number; tip: numbe
  * Serve one drink for an order. Exactly once per order: stock -1, cash += price + tip.
  * The order object is marked so a repeated call is rejected.
  */
-export function serveDrink(state: ClubState, order: DrinkOrder, happiness: number, luxury: number, tipRate = 0.15): ServeResult {
+export function serveDrink(state: ClubState, order: DrinkOrder, happiness: number, luxury: number, tipRate = 0.15, tipMultiplier = 1): ServeResult {
   if (order.status !== 'pending') return { ok: false, reason: 'Order already processed' };
   if (state.stock.drinks <= 0) {
     order.status = 'failed';
@@ -51,7 +59,7 @@ export function serveDrink(state: ClubState, order: DrinkOrder, happiness: numbe
   }
   const draft = clone(state);
   draft.stock.drinks -= 1;
-  const tip = tipFor(happiness, luxury, tipRate);
+  const tip = Math.round(tipFor(happiness, luxury, tipRate) * tipMultiplier);
   const paid = tuning.drinkPrice + tip;
   const { leveledUp, reward } = creditIncome(draft, paid);
   draft.stats.drinksSold += 1;
