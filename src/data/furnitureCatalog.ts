@@ -10,7 +10,7 @@
  * `art.style` selects a procedural drawing in render/furnitureArt.ts. All art is
  * original replacement art, not original game sprites.
  */
-export type FurnitureKind = 'dancefloor' | 'bar' | 'seat' | 'dj' | 'speaker' | 'decor';
+export type FurnitureKind = 'dancefloor' | 'bar' | 'seat' | 'dj' | 'speaker' | 'decor' | 'tank';
 export type FurnitureCategory = 'floor' | 'dj' | 'bar' | 'seating' | 'decor';
 export type ArtStyle =
   | 'tile'
@@ -24,7 +24,8 @@ export type ArtStyle =
   | 'eggchair'
   | 'booth'
   | 'plant'
-  | 'pillar';
+  | 'pillar'
+  | 'tank';
 
 export interface FurnitureDef {
   id: string;
@@ -59,6 +60,7 @@ export const FURNITURE: readonly FurnitureDef[] = [
   f({ id: 'speaker_white', name: 'White Club Speaker', category: 'dj', kind: 'speaker', price: 1200, requiredLevel: 2, w: 1, h: 1, luxury: 30, walkable: false, art: { style: 'speaker', top: 0xf2f4f8, side: 0xb5bcc8, height: 46 } }),
   // Bars
   f({ id: 'bar_basic', name: 'Blue Top Bar', category: 'bar', kind: 'bar', price: 800, requiredLevel: 0, w: 2, h: 1, luxury: 18, walkable: false, art: { style: 'bar', top: 0x3a6ee8, side: 0xd27a3c, height: 22, glow: 0x9fd8ff } }),
+  f({ id: 'drink_tank', name: 'Drink Tank', category: 'bar', kind: 'tank', price: 1500, requiredLevel: 2, w: 1, h: 1, luxury: 5, walkable: false, art: { style: 'tank', top: 0xc8ced8, side: 0x7a8494, height: 34, glow: 0xb04cff } }),
   f({ id: 'bar_chrome', name: 'Chrome Bar', category: 'bar', kind: 'bar', price: 3500, requiredLevel: 3, w: 2, h: 1, luxury: 70, walkable: false, art: { style: 'bar', top: 0xe8eef6, side: 0x6c7a8c, height: 22, glow: 0x7df9ff } }),
   // Seating
   f({ id: 'stool_red', name: 'Red Bar Stool', category: 'seating', kind: 'seat', price: 150, requiredLevel: 1, w: 1, h: 1, luxury: 6, walkable: false, art: { style: 'stool', top: 0xd8202f, side: 0x7a0e17, height: 16 } }),

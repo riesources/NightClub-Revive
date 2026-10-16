@@ -78,7 +78,8 @@ Reference screenshots were downloaded for **visual reference only**. They are co
 | Dressing room has a randomize dice | CONFIRMED | S1 | `dressingRoom.ts` |
 | Luxury raises tips | SOURCED (1) | S3 | `tipFor` |
 | Bouncers remove troublemakers, automatically within their area or by targeting | CONFIRMED | S1, S2, S8 | `staff.ts` (`switchRole`, `setBouncerPost`), `GuestSimulation.runBouncers` / `sendBouncer` |
-| Bartender trick/speed modes | CONFIRMED | S2, S3 | Not built (P1) |
+| Bartender trick/speed modes | CONFIRMED (options) / PROPOSED (multipliers) | S2, S3 | `bartenderModeEffect`, Workers toggle |
+| Drink capacity raised by tanks | SOURCED (1) | S2 | `drink_tank` item, `stockCapacity` (base 200 + 100 per tank, PROPOSED) |
 | Celebrities: book (expensive), short visit, big spend, celebrity wall, level-gated cards | CONFIRMED | S2, S3, S8 | `data/celebrities.ts` (original fictional VIPs, numbers PROPOSED), `domain/celebrity.ts`, `GuestSimulation.updateCelebrity` |
 | Music was licensed commercial tracks | CONFIRMED | S7, S8 | **Replaced** by original procedural loops (`audio/music.ts`) |
 | Party theme names | UNVERIFIED | — | Not used |

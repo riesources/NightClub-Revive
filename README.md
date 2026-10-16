@@ -91,7 +91,9 @@ The game is written in **TypeScript** and runs in any modern web browser.
 
 - **Celebrities**: book original VIPs who visit, spend big, cheer up the crowd and go up on your celebrity wall.
 
-Not built yet: parties, bartender modes, neighbors/friends bar. See [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md).
+- **Bartender modes** (Tricks for bigger tips, Speed for faster service) and **Drink Tanks** that raise your drink limit.
+
+Not built yet: parties, neighbors/friends bar. See [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md).
 
 ## Layout
 

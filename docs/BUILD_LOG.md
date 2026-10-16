@@ -1,5 +1,23 @@
 # Build Log
 
+## 2026-10-16 — Bartender modes and drink tanks
+
+**Added**
+- **Bartender modes** (GameYum: a "trick" option for bigger tips, a speed option for double-speed service; CONFIRMED). Each bartender card in Workers has a **Tricks / Speed** toggle.
+  - Tricks: 2× tips, 1.5× serve time.
+  - Speed: 0.5× serve time, normal tips.
+  - Both multipliers are PROPOSED.
+- Speed is the default, so bars now serve faster than before (0.9 s instead of 1.8 s).
+- **Drink Tank** furniture (Bars category, level 2, $1,500): +100 drink capacity each (GameYum: tanks raise capacity; CONFIRMED concept). The HUD tube shows `stock/capacity`. Selling a tank trims stock to the new limit.
+- Schema v5 adds a bartender `mode`, with a v4→v5 migration (existing bartenders get Speed).
+
+**Commands run and results**
+- `npx vitest run`: 82/82 passed (6 new tests). They include a head-to-head simulation: Speed sells more drinks, Tricks earns more tip per drink.
+- `npm run build`: passes.
+- `node scripts/smoke.mjs`: 20/20 passed (new check: Workers panel switches a bartender to Tricks).
+- Real-app screenshots: Workers mode toggle, two tanks in the club, tube showing 100/400.
+
+
 ## 2026-10-16 — Celebrities
 
 **Added**

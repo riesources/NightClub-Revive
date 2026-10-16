@@ -1,6 +1,7 @@
 import { getFurnitureDef } from '../data/furnitureCatalog';
 import { tuning } from '../data/tuning';
 import { clone, newId } from './club';
+import { stockCapacity } from './bar';
 import { checkPlacement } from './grid';
 import { fail, ok, type ClubState, type Facing, type Result } from './types';
 
@@ -56,5 +57,7 @@ export function sellFurniture(state: ClubState, id: string): Result {
   draft.furniture = draft.furniture.filter((x) => x.id !== id);
   draft.cash += sellRefund(f.catalogId);
   for (const s of draft.staff) if (s.barId === id) s.barId = null;
+  // Selling a drink tank can lower capacity; drinks over the new limit are lost.
+  draft.stock.drinks = Math.min(draft.stock.drinks, stockCapacity(draft));
   return ok(draft);
 }

@@ -1607,6 +1607,37 @@ button {
   color: var(--gold);
 }
 
+/* Bartender mode toggle */
+.w-bartender {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.w-modes {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+}
+
+.w-mode {
+  flex: 1;
+  font-size: 10px;
+  padding: 2px 4px;
+  border: 2px solid var(--ink);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #cfe8ff;
+  cursor: pointer;
+}
+
+.w-mode.active {
+  background: var(--green);
+  color: #fff;
+  text-shadow: var(--outline-text);
+}
+
 /* ---- small screens --------------------------------------------------------------- */
 @media (max-width: 760px) {
   .scores .score {

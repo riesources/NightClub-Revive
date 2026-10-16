@@ -238,6 +238,28 @@ export function drawFurniture(g: G, def: FurnitureDef, col: number, row: number,
       for (const [dx, dy, r] of [[-2, -33, 7], [-10, -27, 5], [8, -27, 5], [-5, -40, 5], [5, -40, 5]] as const) g.fillCircle(centre.x + dx, centre.y + dy, r);
       break;
     }
+    case 'tank': {
+      // steel drink keg with a purple level window (matches the HUD drink tube)
+      g.fillStyle(0x000000, 0.25 * A);
+      g.fillEllipse(centre.x, centre.y, 30, 13);
+      g.fillStyle(side, A);
+      g.fillRect(centre.x - 12, centre.y - H, 24, H);
+      g.fillEllipse(centre.x, centre.y, 24, 10);
+      g.fillStyle(top, A);
+      g.fillEllipse(centre.x, centre.y - H, 24, 10);
+      g.lineStyle(1.2, OUT, 0.7 * A);
+      g.strokeEllipse(centre.x, centre.y - H, 24, 10);
+      g.lineBetween(centre.x - 12, centre.y - H, centre.x - 12, centre.y);
+      g.lineBetween(centre.x + 12, centre.y - H, centre.x + 12, centre.y);
+      g.fillStyle(shade(side, 0.8), A);
+      g.fillRect(centre.x - 12, centre.y - H * 0.7, 24, 2);
+      g.fillRect(centre.x - 12, centre.y - H * 0.3, 24, 2);
+      g.fillStyle(def.art.glow ?? 0xb04cff, (0.7 + 0.3 * pulse) * A);
+      g.fillRect(centre.x - 3, centre.y - H * 0.65, 6, H * 0.4);
+      g.fillStyle(0xffffff, 0.35 * A);
+      g.fillRect(centre.x - 9, centre.y - H + 4, 3, H - 8);
+      break;
+    }
     case 'pillar': {
       drawPrism(g, col + 0.3, row + 0.3, 0.4, 0.4, 0, H, top, side, cfg, A);
       g.fillStyle(def.art.glow ?? top, (0.15 + 0.35 * pulse) * A);

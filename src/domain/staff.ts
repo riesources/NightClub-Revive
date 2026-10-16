@@ -19,7 +19,7 @@ export function hireBartender(state: ClubState): Result {
   const draft = clone(state);
   draft.cash -= tuning.bartenderHireCost;
   const name = NAMES[draft.staff.length % NAMES.length];
-  draft.staff.push({ id: newId(draft, 's'), role: 'bartender', name, barId: null, post: null });
+  draft.staff.push({ id: newId(draft, 's'), role: 'bartender', name, barId: null, post: null, mode: 'speed' });
   return ok(draft);
 }
 
@@ -84,4 +84,21 @@ export function setBouncerPost(state: ClubState, staffId: string, post: GridPoin
 /** Chebyshev distance, so a bouncer's area is a square of tiles around the post. */
 export function inBouncerArea(post: GridPoint, x: number, y: number, radius: number): boolean {
   return Math.max(Math.abs(Math.floor(x) - post.col), Math.abs(Math.floor(y) - post.row)) <= radius;
+}
+
+/** Switch a bartender between Tricks (bigger tips) and Speed (faster service). */
+export function setBartenderMode(state: ClubState, staffId: string, mode: 'speed' | 'tricks'): Result {
+  const s = state.staff.find((x) => x.id === staffId);
+  if (!s) return fail('Staff member not found');
+  if (s.role !== 'bartender') return fail('Only bartenders have modes');
+  const draft = clone(state);
+  draft.staff.find((x) => x.id === staffId)!.mode = mode;
+  return ok(draft);
+}
+
+/** Serve time and tip multiplier for a bartender's current mode. */
+export function bartenderModeEffect(mode: 'speed' | 'tricks'): { serveMs: number; tipMultiplier: number } {
+  return mode === 'tricks'
+    ? { serveMs: tuning.serveDurationMs * tuning.tricksServeMultiplier, tipMultiplier: tuning.tricksTipMultiplier }
+    : { serveMs: tuning.serveDurationMs * tuning.speedServeMultiplier, tipMultiplier: 1 };
 }

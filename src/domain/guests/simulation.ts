@@ -10,7 +10,7 @@ import { isPlaying } from '../dj';
 import { adjacentWalkableCells, blockedCells, cellKey, entranceCell, inBounds, instanceCells } from '../grid';
 import { findPath } from '../pathfinding/astar';
 import { pickOne, type Rng } from '../rng';
-import { bartenderForBar, inBouncerArea } from '../staff';
+import { bartenderForBar, bartenderModeEffect, inBouncerArea } from '../staff';
 import { GENRES, type ClubState, type GridPoint } from '../types';
 import { TRANSITIONS, WALKING_STATES, guestCell, type Guest, type GuestState } from './guest';
 
@@ -488,9 +488,10 @@ export class GuestSimulation {
         queue.shift();
         continue;
       }
-      if (now < Math.max(this.nextServeAt.get(barId) ?? 0, g.queuedAt + tuning.serveDurationMs)) continue;
+      const fx = bartenderModeEffect(bartenderForBar(state, barId)!.mode);
+      if (now < Math.max(this.nextServeAt.get(barId) ?? 0, g.queuedAt + fx.serveMs)) continue;
       const luxury = this.world(state).luxury;
-      const res = serveDrink(state, g.order, g.happiness, luxury, g.tipRate);
+      const res = serveDrink(state, g.order, g.happiness, luxury, g.tipRate, fx.tipMultiplier);
       queue.shift();
       g.barId = null;
       g.order = null;
@@ -504,7 +505,7 @@ export class GuestSimulation {
         g.happiness = Math.min(100, g.happiness + 8);
         this.setState(g, 'DRINKING', now);
         g.activityEndsAt = now + tuning.drinkDurationMs;
-        this.nextServeAt.set(barId, now + tuning.serveDurationMs);
+        this.nextServeAt.set(barId, now + fx.serveMs);
       } else {
         host.emit({ type: 'outOfDrinks' });
         g.happiness = Math.max(0, g.happiness - tuning.noDrinkPenalty);

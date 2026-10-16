@@ -49,6 +49,7 @@ export function validateState(d: Record<string, unknown>): { ok: true; state: Cl
     if (!s || typeof s.id !== 'string' || staffIds.has(s.id) || (s.role !== 'bartender' && s.role !== 'bouncer') || typeof s.name !== 'string') return bad('Invalid staff member');
     if (s.post !== null && (!s.post || !isInt(s.post.col) || !isInt(s.post.row) || s.post.col >= room.cols || s.post.row >= room.rows)) return bad('Invalid bouncer post');
     if (s.role === 'bouncer' && s.barId !== null) return bad('Bouncer assigned to a bar');
+    if (s.mode !== 'speed' && s.mode !== 'tricks') return bad('Invalid bartender mode');
     if (s.barId !== null && !ids.has(s.barId)) return bad('Staff assigned to missing bar');
     staffIds.add(s.id);
   }
