@@ -12,12 +12,15 @@ This describes how the current build behaves. Labels refer to `EVIDENCE_REGISTER
 | Build / decorate | Built: category tabs, cards (swatch, price, level, footprint, luxury), placement preview, move, rotate, sell with confirmation |
 | Context panel | Built for furniture (incl. bar staffing / queue) and guests (state, mood, happiness, thirst, Dedicate Song) |
 | DJ panel | Built: 4 genres, start / restart, live countdown, Drop the Bass, Dedicate Song (targeting mode) with cooldowns |
-| Staff | Built: bartender list, assign to bar, hire. Bouncers not yet |
+| Staff | Built: Workers panel with level-locked slots, Bar Tender / Bouncer switch, bouncer posts, Tricks / Speed bartender modes |
 | Dressing room | Built: draft preview, 5 categories, Save / Cancel. No randomize (not evidenced) |
 | Settings | Built: export / import save, debug overlay toggle, reset with confirmation, credits / disclaimer |
 | Tutorial | Built: first-run card, dismissal persists |
 | Error states | Built: corrupt save notice with backup key; storage-unavailable warning |
-| Level / progress view, inventory, parties, celebrities, neighbors | Not built |
+| Celebrities | Built: booking panel, timed VIP visit, celebrity wall |
+| Parties | Built: party planner, timed guest rush with a goal, HUD countdown pill |
+| Level / progress view | Built: opens from the level badge or XP bar. Current level + XP, lifetime stats, next milestone, full level ladder with each level's unlocks (derived from the data files) |
+| Inventory, neighbors | Not built |
 
 ## Controls
 

@@ -1,5 +1,25 @@
 # Build Log
 
+## 2026-10-16 — Level / progress screen
+
+**Added**
+- A **Progress** screen that opens from the level badge or the XP bar. It shows:
+  - your level, title and XP bar, with how much XP the next level needs,
+  - lifetime stats: total earned, guests, drinks sold, tips, celebrity visits, parties won,
+  - a **Coming next** box for the next level that unlocks something,
+  - the full level ladder. Each row lists that level's unlocks: cash bonus, bigger club, worker slot, furniture (with thumbnails), celebrities and parties. Reached levels are ticked and your current level is highlighted.
+- Unlocks are worked out from the data files (`src/domain/unlocks.ts`), so new items show up automatically.
+- The level-up popup now lists what you just unlocked and has a **What's next?** button.
+- The level curve now runs to **level 21** (was 14). The original's Workers panel shows slots unlocking at levels 17 and 21, which were unreachable before. New thresholds and titles are PROPOSED.
+- Docs: `GAMEPLAY_SPEC.md` and `EVIDENCE_REGISTER.md` no longer list bouncers, celebrities and parties as missing.
+
+**Commands run and results**
+- `npx vitest run`: 95/95 passed (5 new unlock tests).
+- `npm run build`: passes.
+- `node scripts/smoke.mjs`: 22/22 passed (new check: the progress screen opens from the badge and highlights the current level).
+- Real-app screenshot reviewed: progress screen at level 1.
+
+
 ## 2026-10-16 — Parties
 
 **Added**

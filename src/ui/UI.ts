@@ -4,7 +4,8 @@ import { celebrityPhase } from '../domain/celebrity';
 import { PARTIES, getParty } from '../data/parties';
 import { partyActive } from '../domain/party';
 import { CATEGORY_LABELS, FURNITURE, getFurnitureDef, type FurnitureCategory } from '../data/furnitureCatalog';
-import { LEVEL_TITLES, WORKER_SLOT_LEVELS } from '../data/progression';
+import { LEVEL_TITLES, MAX_LEVEL, WORKER_SLOT_LEVELS } from '../data/progression';
+import { levelLadder, nextMilestone, unlocksAtLevel, type Unlock } from '../domain/unlocks';
 import { tuning } from '../data/tuning';
 import type { AvatarAppearance } from '../data/appearanceCatalog';
 import { stockCapacity } from '../domain/bar';
@@ -111,6 +112,7 @@ export class UI {
   private cardState: Card = null;
   private recentToasts = new Map<string, number>();
   private refs: Record<string, HTMLElement> = {};
+  private lastLevelShown = 0;
   private portraitKey = '';
 
   constructor(
@@ -121,6 +123,7 @@ export class UI {
     mount: HTMLElement,
   ) {
     this.root = mount;
+    this.lastLevelShown = game.state.level;
     this.root.append(this.top, this.quick, this.tube, this.tools, this.nowPlaying, this.card, this.build, this.dock, this.modeBar, this.toasts, this.tooltip);
     this.buildStatic();
     game.on((e) => this.onEvent(e));
@@ -200,7 +203,7 @@ export class UI {
     const r = this.refs;
     // Top-left: portrait, level badge, XP bar
     r.portrait = h('div', { class: 'player-portrait', title: 'Dress Up', onclick: () => this.openDressingRoom() });
-    r.level = h('div', { class: 'level-badge' });
+    r.level = h('div', { class: 'level-badge', title: 'Your progress', role: 'button', 'aria-label': 'Open progress', onclick: () => this.openProgress() });
     r.xpFill = h('div', { class: 'xp-fill' });
     r.xpText = h('div', { class: 'xp-text' });
     r.xpTitle = h('div', { class: 'xp-title' });
@@ -211,7 +214,7 @@ export class UI {
     r.pop = h('div', { class: 'score-num' });
     r.lux = h('div', { class: 'score-num' });
     this.top.append(
-      h('div', { class: 'player' }, r.portrait, r.level, h('div', { class: 'xp' }, h('div', { class: 'xp-bar' }, r.xpFill, r.xpText), r.xpTitle)),
+      h('div', { class: 'player' }, r.portrait, r.level, h('div', { class: 'xp', title: 'Your progress: what you have unlocked and what comes next', onclick: () => this.openProgress() }, h('div', { class: 'xp-bar' }, r.xpFill, r.xpText), r.xpTitle)),
       h('div', { class: 'cash', title: 'Cash' }, icon(ICONS.money, 'money-icon'), r.cash, r.partyPill),
       h(
         'div',
@@ -636,6 +639,10 @@ export class UI {
   }
 
   private showLevelUp(level: number, reward: number): void {
+    // Several levels can be gained at once; list every unlock since the last popup.
+    const news: Unlock[] = [];
+    for (let l = this.lastLevelShown < level ? this.lastLevelShown + 1 : level; l <= level; l++) news.push(...unlocksAtLevel(l).filter((u) => u.kind !== 'cash'));
+    this.lastLevelShown = level;
     const el = h(
       'div',
       { class: 'modal-backdrop' },
@@ -646,8 +653,24 @@ export class UI {
         h('div', { class: 'lv-head' }, `YOU REACHED LEVEL ${level}!`),
         h('div', { class: 'lv-title' }, LEVEL_TITLES[level] ?? `Level ${level}`),
         h('div', { class: 'lv-reward' }, `$${fmt(reward)} more to spend!`),
-        h('div', { class: 'lv-msg' }, level === 1 ? "Congratulations! Your club's open for business!" : 'Your club has grown. Check Decorate for new items!'),
-        h('div', { class: 'modal-actions center' }, h('button', { class: 'btn ok big', onclick: () => el.remove() }, 'Continue')),
+        h('div', { class: 'lv-msg' }, level === 1 ? "Congratulations! Your club's open for business!" : 'Your club has grown!'),
+        news.length ? h('div', { class: 'lv-unlocks' }, h('div', { class: 'lv-unlocks-title' }, 'New for you:'), this.unlockChips(news)) : null,
+        h(
+          'div',
+          { class: 'modal-actions center' },
+          h('button', { class: 'btn ok big', onclick: () => el.remove() }, 'Continue'),
+          h(
+            'button',
+            {
+              class: 'btn big',
+              onclick: () => {
+                el.remove();
+                this.openProgress();
+              },
+            },
+            "What's next?",
+          ),
+        ),
       ),
     );
     document.body.append(el);
@@ -763,6 +786,98 @@ export class UI {
       if (st && b) st.textContent = phase === 'coming' ? `Arriving in ${Math.ceil((b.arrivesAt - now) / 1000)}s` : phase === 'here' ? `In your club for ${mmss(b.leavesAt - now)}` : 'Saying goodbye...';
     }, 1000);
     document.body.append(el);
+  }
+
+  /** Small labelled chips for a list of unlocks, with a picture per kind. */
+  private unlockChips(list: Unlock[]): HTMLElement {
+    const pic = (u: Unlock): Node => {
+      if (u.kind === 'furniture') {
+        const def = u.id ? getFurnitureDef(u.id) : undefined;
+        if (def) return furnitureThumb(def, 30);
+      }
+      if (u.kind === 'celebrity') {
+        const c = u.id ? getCelebrity(u.id) : undefined;
+        if (c) return portrait(c.look, 30);
+      }
+      const svg = { cash: ICONS.money, room: ICONS.catFloor, worker: ICONS.workers, party: ICONS.party, furniture: ICONS.catDecor, celebrity: ICONS.celebs }[u.kind];
+      return icon(svg, 'chip-icon');
+    };
+    return h('div', { class: 'unlock-chips' }, ...list.map((u) => h('span', { class: `unlock-chip k-${u.kind}`, title: u.label }, h('span', { class: 'chip-pic' }, pic(u)), u.label)));
+  }
+
+  /**
+   * Progress screen: current level and XP, lifetime stats, the next milestone,
+   * and the full level ladder with what each level unlocks. All unlock lists are
+   * derived from the data files, so they stay in sync with the catalogue.
+   */
+  private openProgress(): void {
+    const s = this.game.state;
+    const xp = xpProgress(s.xp);
+    const atCap = s.level >= MAX_LEVEL;
+    const next = nextMilestone(s.level);
+    const stat = (label: string, value: string) => h('div', { class: 'pg-stat' }, h('div', { class: 'pg-stat-num' }, value), h('div', { class: 'pg-stat-label' }, label));
+    const celebs = Object.values(s.celebrityWall).reduce((a, b) => a + b, 0);
+    const parties = Object.values(s.partyHistory).reduce((a, b) => a + b, 0);
+    const ladder = levelLadder().map((info) => {
+      const state = info.level < s.level ? 'done' : info.level === s.level ? 'current' : 'locked';
+      return h(
+        'div',
+        { class: `pg-row ${state}`, 'data-level': String(info.level) },
+        h('div', { class: 'pg-row-num' }, String(info.level)),
+        h(
+          'div',
+          { class: 'pg-row-body' },
+          h('div', { class: 'pg-row-head' }, h('span', { class: 'pg-row-title' }, info.title), h('span', { class: 'pg-row-xp' }, state === 'done' ? '✓ Reached' : state === 'current' ? 'You are here' : `${fmt(info.xp)} XP`)),
+          info.unlocks.length ? this.unlockChips(info.unlocks) : h('div', { class: 'pg-none' }, 'Starting club'),
+        ),
+      );
+    });
+    const close = () => el.remove();
+    const el: HTMLElement = h(
+      'div',
+      { class: 'modal-backdrop', onclick: (e: Event) => e.target === el && close() },
+      h(
+        'div',
+        { class: 'modal panel-tabbed progress-panel', role: 'dialog', 'aria-label': 'Progress' },
+        h('div', { class: 'tab-label' }, icon(ICONS.celebs, 'tab-icon'), 'Progress'),
+        h('button', { class: 'btn ok corner', onclick: close }, 'OK'),
+        h(
+          'div',
+          { class: 'pg-top' },
+          h('div', { class: 'pg-level' }, String(s.level)),
+          h(
+            'div',
+            { class: 'pg-top-body' },
+            h('div', { class: 'pg-title' }, LEVEL_TITLES[s.level] ?? `Level ${s.level}`),
+            h('div', { class: 'pg-bar' }, h('div', { class: 'pg-bar-fill', style: `width:${atCap ? 100 : Math.min(100, (xp.into / xp.needed) * 100)}%` })),
+            h('div', { class: 'pg-bar-text' }, atCap ? 'Top level reached!' : `${fmt(xp.into)} / ${fmt(xp.needed)} XP to level ${s.level + 1} · every $1 you earn is ${tuning.xpPerCoin} XP`),
+          ),
+        ),
+        h(
+          'div',
+          { class: 'pg-stats' },
+          stat('Total earned', `$${fmt(s.totalEarned)}`),
+          stat('Guests', fmt(s.stats.guestsVisited)),
+          stat('Drinks sold', fmt(s.stats.drinksSold)),
+          stat('Tips', `$${fmt(s.stats.tipsEarned)}`),
+          stat('Celebrity visits', fmt(celebs)),
+          stat('Parties won', fmt(parties)),
+        ),
+        next
+          ? h(
+              'div',
+              { class: 'pg-next' },
+              h('div', { class: 'pg-next-title' }, `Coming next · Level ${next.level}: ${next.title}`),
+              h('div', { class: 'pg-next-sub' }, `${fmt(Math.max(0, next.xp - s.xp))} XP to go`),
+              this.unlockChips(next.unlocks),
+            )
+          : null,
+        h('div', { class: 'pg-ladder' }, ...ladder),
+        h('div', { class: 'placeholder-note' }, 'Level 1 (Radiophonic Rookie, $500) and the worker-slot levels come from screenshots of the original; other titles, XP and rewards are estimates.'),
+      ),
+    );
+    document.body.append(el);
+    el.querySelector<HTMLElement>('.pg-row.current')?.scrollIntoView({ block: 'center' });
   }
 
   /**

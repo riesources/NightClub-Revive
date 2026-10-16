@@ -5,7 +5,12 @@
  * spend! Congratulations! Your club's open for business!" (Pixnet screenshot,
  * CONFIRMED). All other thresholds, titles and rewards are PROPOSED.
  */
-export const LEVEL_XP: readonly number[] = [0, 30, 1500, 4000, 8000, 14000, 22000, 32000, 45000, 60000, 80000, 105000, 135000, 170000, 210000];
+export const LEVEL_XP: readonly number[] = [
+  0, 30, 1500, 4000, 8000, 14000, 22000, 32000, 45000, 60000, 80000, 105000, 135000, 170000, 210000,
+  // Levels 15-21: the Workers panel shows slots unlocking at 17 and 21, so the
+  // original went at least that far (CONFIRMED). Thresholds PROPOSED.
+  255000, 305000, 360000, 420000, 485000, 555000, 630000,
+];
 
 export const LEVEL_TITLES: readonly string[] = [
   'Opening Night',
@@ -23,6 +28,13 @@ export const LEVEL_TITLES: readonly string[] = [
   'Mixmaster',
   'Nightlife Icon',
   'City Superstar',
+  'Platinum Spinner',
+  'Main Stage Maestro',
+  'Velvet Empire',
+  'Sound System Sultan',
+  'Downtown Dynasty',
+  'World Tour Titan',
+  'Nightclub Legend',
 ];
 
 /** Cash awarded on reaching a level. Level 1 = $500 is CONFIRMED; the rest PROPOSED. */
