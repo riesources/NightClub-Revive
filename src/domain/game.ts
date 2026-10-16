@@ -6,6 +6,7 @@ import * as dj from './dj';
 import { buyAndPlace, moveFurniture, sellFurniture } from './economy';
 import { GuestSimulation, type SimEvent, type SimHost } from './guests/simulation';
 import { createRng, type Rng } from './rng';
+import { bookCelebrity } from './celebrity';
 import { assignBartender, hireBartender, setBouncerPost, switchRole } from './staff';
 import type { ClubState, Facing, Genre, GridPoint, Result } from './types';
 
@@ -87,6 +88,9 @@ export class Game implements SimHost {
   }
   assignBartender(staffId: string, barId: string | null) {
     return this.apply(assignBartender(this._state, staffId, barId));
+  }
+  bookCelebrity(celebId: string, now = Date.now()) {
+    return this.apply(bookCelebrity(this._state, celebId, now), 'Booked! Your guest of honour is on the way.');
   }
   switchRole(staffId: string) {
     return this.apply(switchRole(this._state, staffId));

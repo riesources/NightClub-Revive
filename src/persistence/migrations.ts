@@ -66,6 +66,8 @@ export const MIGRATIONS: Record<number, Migration> = {
     if (Array.isArray(d.staff)) d.staff = (d.staff as Record<string, unknown>[]).map((s) => ({ ...s, post: null }));
     return d;
   },
+  /** v3 -> v4: celebrity wall and booking. */
+  3: (raw) => ({ ...structuredClone(raw), celebrityWall: {}, celebrity: null }),
 };
 
 export type MigrateResult = { ok: true; data: Record<string, unknown> } | { ok: false; reason: string };

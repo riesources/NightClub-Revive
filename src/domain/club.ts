@@ -30,6 +30,8 @@ export function createNewClub(now = Date.now()): ClubState {
     stock: { drinks: tuning.startingDrinkStock },
     stats: { drinksSold: 0, guestsVisited: 0, tipsEarned: 0 },
     tutorialDismissed: false,
+    celebrityWall: {},
+    celebrity: null,
     nextId: 1,
     savedAt: now,
   };

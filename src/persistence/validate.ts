@@ -1,4 +1,5 @@
 import { isValidAppearance } from '../data/appearanceCatalog';
+import { getCelebrity } from '../data/celebrities';
 import { getFurnitureDef } from '../data/furnitureCatalog';
 import { checkPlacement } from '../domain/grid';
 import { GENRES, SCHEMA_VERSION, type ClubState } from '../domain/types';
@@ -21,6 +22,11 @@ export function validateState(d: Record<string, unknown>): { ok: true; state: Cl
   const stats = d.stats as ClubState['stats'];
   if (!stats || !isInt(stats.drinksSold) || !isInt(stats.guestsVisited) || !isInt(stats.tipsEarned)) return bad('Invalid stats');
   if (typeof d.tutorialDismissed !== 'boolean') return bad('Invalid tutorial flag');
+  const wall = d.celebrityWall as Record<string, unknown>;
+  if (!wall || typeof wall !== 'object' || Array.isArray(wall)) return bad('Invalid celebrity wall');
+  for (const [k, v] of Object.entries(wall)) if (!getCelebrity(k) || !isInt(v, 1)) return bad('Invalid celebrity wall entry');
+  const celeb = d.celebrity as ClubState['celebrity'];
+  if (celeb !== null && (!celeb || !getCelebrity(celeb.id) || !isNum(celeb.arrivesAt) || !isNum(celeb.leavesAt) || celeb.leavesAt < celeb.arrivesAt)) return bad('Invalid celebrity booking');
   if (!isNum(d.savedAt)) return bad('Invalid savedAt');
   const dj = d.dj as ClubState['dj'];
   if (!dj || !GENRES.includes(dj.genre) || !isTsOrNull(dj.setStartedAt) || !isTsOrNull(dj.setEndsAt) || !isTsOrNull(dj.lastDropBassAt) || !isTsOrNull(dj.lastDedicateAt))

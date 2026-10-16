@@ -54,7 +54,7 @@ export interface Guest {
   /** Total spent this visit: cover + drinks + tips. */
   spent: number;
   tipRate: number;
-  guestClass: 'Regular';
+  guestClass: 'Regular' | 'Celebrity';
   /** Hidden until they act up at `troubleAt`. */
   troublemaker: boolean;
   troubleAt: number;

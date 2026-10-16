@@ -144,6 +144,21 @@ try {
   await page.screenshot({ path: `${SHOTS}/06-workers.png` });
   await page.click('.panel-tabbed .btn.ok');
 
+  // Celebrities: panel opens from the dock star and books a VIP
+  await page.evaluate(() => {
+    const { game } = window.__ncr;
+    game.replaceState({ ...game.state, cash: game.state.cash + 5000, level: Math.max(1, game.state.level) });
+  });
+  await click('.dock-btn[data-id="celebs"]');
+  // Guests keep paying while we click, so net out anything earned in between.
+  const before = await page.evaluate(() => ({ cash: window.__ncr.game.state.cash, earned: window.__ncr.game.state.totalEarned }));
+  await click('.celeb-card >> nth=0 >> .btn');
+  const after = await page.evaluate(() => ({ b: window.__ncr.game.state.celebrity?.id, cash: window.__ncr.game.state.cash, earned: window.__ncr.game.state.totalEarned }));
+  const charged = before.cash - after.cash + (after.earned - before.earned);
+  check('Celebrities panel books a VIP and charges once', after.b === 'dj_nova' && charged === 1500, `charged $${charged}`);
+  await page.screenshot({ path: `${SHOTS}/06b-celebrities.png` });
+  await page.click('.celeb-panel .btn.corner');
+
   // Save -> reload -> compare. Freeze the simulation first: guests keep paying
   // cover/drinks, which would otherwise change state between snapshot and reload.
   await page.evaluate(() => {
