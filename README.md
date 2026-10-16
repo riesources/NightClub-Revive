@@ -16,11 +16,13 @@ The layout, characters, furniture and interface are modelled closely on historic
 
 **You need:** [Node.js](https://nodejs.org/) 18 or newer (20+ recommended) and a modern desktop browser (Chrome, Edge, Firefox or Safari).
 
-1. Download the code:
-   ```bash
-   git clone https://github.com/riesources/NightClub-Revive.git
-   cd NightClub-Revive
-   ```
+1. Get the code, either way works:
+   - **No git:** on GitHub click **Code → Download ZIP**, unzip it, and open a terminal inside the unzipped folder (e.g. `cd NightClub-Revive-main`).
+   - **With git:**
+     ```bash
+     git clone https://github.com/riesources/NightClub-Revive.git
+     cd NightClub-Revive
+     ```
 2. Install dependencies (first time only):
    ```bash
    npm install
