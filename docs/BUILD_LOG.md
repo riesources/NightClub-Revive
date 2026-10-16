@@ -33,7 +33,7 @@ Still different: proportions are close but not pixel-measured; the original's sk
 **Commands run and results**
 - `npx vitest run`: 119/119 passed (13 new: inventory store/place/clear/migration/validation, rotation cycle/footprint/back spot/save rules, every item draws in all 4 facings, music playlists).
 - `npm run build`: passes.
-- `node scripts/smoke.mjs`: see the PR (new: Store + Inventory tab, 4-way rotation, track playlist + Next).
+- `node scripts/smoke.mjs`: 27/27 passed (new: Store + Inventory tab, 4-way rotation, track playlist + Next).
 - Real-app screenshots reviewed: items in all four facings, inventory tab, new guest card, Latin track in now playing.
 
 
