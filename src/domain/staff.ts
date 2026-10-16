@@ -1,4 +1,5 @@
 import { getFurnitureDef } from '../data/furnitureCatalog';
+import { WORKER_SLOT_LEVELS } from '../data/progression';
 import { tuning } from '../data/tuning';
 import { clone, newId } from './club';
 import { fail, ok, type ClubState, type Result } from './types';
@@ -6,7 +7,13 @@ import { fail, ok, type ClubState, type Result } from './types';
 /** PROPOSED placeholder NPC names (replaces the original Facebook-friend hiring). */
 const NAMES = ['Rico', 'Jade', 'Marco', 'Tasha', 'Dex', 'Luna', 'Kai', 'Bianca', 'Omar', 'Zoe'];
 
+/** Worker slots open at the current level (CONFIRMED pattern: 2, then levels 9/13/17/21). */
+export function workerSlots(level: number): number {
+  return WORKER_SLOT_LEVELS.filter((l) => level >= l).length;
+}
+
 export function hireBartender(state: ClubState): Result {
+  if (state.staff.length >= workerSlots(state.level)) return fail('No free worker slot - more unlock as you level up');
   if (state.cash < tuning.bartenderHireCost) return fail('Not enough cash to hire');
   const draft = clone(state);
   draft.cash -= tuning.bartenderHireCost;

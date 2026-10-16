@@ -45,6 +45,12 @@ export type Mood = 'happy' | 'neutral' | 'unhappy';
 
 export interface Guest {
   id: string;
+  /** Fictional generated name (the original showed names on the guest card). */
+  name: string;
+  /** Total spent this visit: cover + drinks + tips. */
+  spent: number;
+  tipRate: number;
+  guestClass: 'Regular';
   seed: number;
   appearance: AvatarAppearance;
   prefGenre: Genre;

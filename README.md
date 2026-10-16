@@ -1,6 +1,10 @@
 # NightClub Revive
 
-An unofficial fan reconstruction of the 2010 Facebook/browser game **Nightclub City** (Booyah). It is rebuilt as a standalone browser game that runs locally, using public walkthroughs and reviews as evidence. It contains **no original game code, art or music**. All visuals are original placeholder art, and most balance values are proposed rather than historical. See [`docs/EVIDENCE_REGISTER.md`](docs/EVIDENCE_REGISTER.md).
+An unofficial fan reconstruction of the 2010 Facebook/browser game **Nightclub City** (Booyah). It is rebuilt as a standalone browser game that runs locally, using public walkthroughs, reviews and screenshots as evidence.
+
+The layout, characters, furniture and interface are modelled closely on historical screenshots. Everything is **drawn fresh in code**, and the music is **original, generated live**. The game contains **no original code, art or music**. See [`docs/EVIDENCE_REGISTER.md`](docs/EVIDENCE_REGISTER.md) for what is historical and what is proposed.
+
+![club](docs/screenshots/club.png)
 
 ## Run it
 
@@ -16,17 +20,14 @@ Saves are stored in your browser's localStorage. Use **Settings** to export, imp
 
 ## What works
 
-- Isometric club with neon dance floor, bar, DJ booth, seating and decor.
-- Build mode: buy, move, rotate and sell, with a placement preview.
-- Guests who walk, dance, get thirsty, queue at bars, pay and tip, and leave happy or unhappy.
-- DJ sets with 4 genres, a live countdown, **Drop the Bass** and **Dedicate Song**.
-- Drink stock and restocking, bartender hiring and assignment.
-- Levels with automatic room expansion.
-- Dressing room for your avatar.
-- Autosave with corrupt-save recovery.
-- Debug overlay.
+- The original-style HUD: portrait, level and XP, DJ quick buttons with timer, gold cash, POPULARITY/LUXURY badges, drink tube, now playing, and the character dock.
+- Chibi guests who pay a $5 cover, dance, queue at bars, buy drinks and tip, with a guest card showing Spent / Tip Rate / Happiness.
+- DJ card with **Refresh Set / Drop Bass / Dedicate Song**. Club Mix, Hip-Hop, Electronic and Pop mixes, each with its own procedural music.
+- Build band with furniture thumbnails, prices and luxury tooltips. Buy, move, rotate and sell.
+- Workers panel with slots that unlock at levels 9/13/17/21. Level-up screen. Dressing room with gender, dice, skin and head colours.
+- Autosave with versioned migrations and corrupt-save recovery. Debug overlay.
 
-Not built yet: bouncers, parties, celebrities, neighbors, audio. See [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md).
+Not built yet: bouncers, parties, celebrities, neighbors/friends bar. See [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md).
 
 ## Layout
 

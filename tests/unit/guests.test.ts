@@ -42,6 +42,8 @@ describe('guest simulation', () => {
         sales++;
         paid += e.paid;
       }
+      if (e.type === 'cover') paid += e.paid;
+      if (e.type === 'levelUp') paid += e.reward;
     });
     const startDrinks = game.state.stock.drinks;
     const startCash = game.state.cash;
@@ -90,7 +92,8 @@ describe('guest simulation', () => {
   });
 
   it('30+ guests over several minutes: no stuck guests, no illegal transitions', () => {
-    const game = new Game(createNewClub(0), createRng(5));
+    // 12x12 room -> capacity 36, so the 30-guest target doesn't depend on level-ups mid-run.
+    const game = new Game({ ...createNewClub(0), room: { cols: 12, rows: 12 } }, createRng(5));
     game.startSet('electronic', T0);
     game.state.stock.drinks = 10_000; // enough stock for the soak
     let t = T0;

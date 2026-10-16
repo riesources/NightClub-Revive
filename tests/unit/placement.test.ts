@@ -6,7 +6,10 @@ import { tuning } from '../../src/data/tuning';
 import { validateState } from '../../src/persistence/validate';
 import type { ClubState } from '../../src/domain/types';
 
-const empty = (): ClubState => ({ ...createNewClub(0), furniture: [], staff: [] });
+import { getFurnitureDef } from '../../src/data/furnitureCatalog';
+
+const SOFA = getFurnitureDef('sofa_red')!.price;
+const empty = (): ClubState => ({ ...createNewClub(0), level: 1, furniture: [], staff: [] });
 
 describe('placement rules', () => {
   it('starter club layout is itself valid', () => {
@@ -53,9 +56,13 @@ describe('purchase transactions', () => {
   it('charges exactly the price once on success', () => {
     const s = empty();
     const r = buyAndPlace(s, 'sofa_red', 1, 1);
-    expect(r.ok && r.state.cash).toBe(s.cash - 350);
+    expect(r.ok && r.state.cash).toBe(s.cash - SOFA);
     expect(r.ok && r.state.furniture.length).toBe(1);
     expect(s.furniture.length).toBe(0); // input untouched
+  });
+
+  it('level-gated items are refused below their level', () => {
+    expect(buyAndPlace({ ...empty(), level: 0 }, 'sofa_red', 1, 1)).toEqual({ ok: false, reason: 'Unlocks at level 1' });
   });
 
   it('failed purchases never change cash', () => {
@@ -81,10 +88,10 @@ describe('purchase transactions', () => {
   });
 
   it('allows spending down to exactly zero but never negative', () => {
-    const s = { ...empty(), cash: 350 };
+    const s = { ...empty(), cash: SOFA };
     const r = buyAndPlace(s, 'sofa_red', 1, 1);
     expect(r.ok && r.state.cash).toBe(0);
-    if (r.ok) expect(buyAndPlace(r.state, 'stool_basic', 5, 5).ok).toBe(false);
+    if (r.ok) expect(buyAndPlace(r.state, 'stool_red', 5, 5).ok).toBe(false);
   });
 });
 

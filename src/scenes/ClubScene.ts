@@ -9,10 +9,10 @@ import type { ClubState } from '../domain/types';
 import { drawAvatar } from '../render/avatarArt';
 import { drawFurniture, drawTileDiamond } from '../render/furnitureArt';
 import { DEFAULT_ISO, depthFor, gridToScreen, screenToGrid, type IsoConfig } from '../render/isoProjection';
-import { PhaserPainter } from '../render/painter';
+import { PhaserPainter, shade } from '../render/painter';
 import type { Interaction } from '../ui/interaction';
 
-const WALL_H = 110;
+const WALL_H = 96;
 const DEPTH_FLOOR = -1_000_000;
 const DEPTH_FLAT = -500_000;
 const DEPTH_UI = 1_000_000;
@@ -87,6 +87,10 @@ export class ClubScene extends Phaser.Scene {
       const cam = this.cameras.main;
       cam.setZoom(Phaser.Math.Clamp(cam.zoom * (dy > 0 ? 0.9 : 1.1), 0.5, 2));
     });
+    this.interaction.zoomBy = (f: number) => {
+      const cam = this.cameras.main;
+      cam.setZoom(Phaser.Math.Clamp(cam.zoom * f, 0.4, 2));
+    };
     this.input.mouse?.disableContextMenu();
     this.input.keyboard?.on('keydown-ESC', () => this.cancelMode());
     this.input.keyboard?.on('keydown-R', () => this.rotateMode());
@@ -102,10 +106,14 @@ export class ClubScene extends Phaser.Scene {
     const cam = this.cameras.main;
     const roomW = ((cols + rows) * this.cfg.tileW) / 2;
     const roomH = ((cols + rows) * this.cfg.tileH) / 2 + WALL_H;
-    const availH = Math.max(200, cam.height - 140);
-    cam.setZoom(Phaser.Math.Clamp(Math.min((cam.width - 16) / roomW, availH / roomH), 0.4, 1));
+    // Leave room for the HUD (~110px) and the dock (~96px), as the original framed the club.
+    const availH = Math.max(200, cam.height - 210);
+    const availW = Math.max(200, cam.width - 120);
+    const zoom = Phaser.Math.Clamp(Math.min(availW / roomW, availH / roomH), 0.4, 1.25);
+    cam.setZoom(zoom);
     const c = gridToScreen(cols / 2, rows / 2, this.cfg);
-    cam.centerOn(c.x, c.y - WALL_H / 2 + 10);
+    // Shift so the room sits in the band between HUD and dock.
+    cam.centerOn(c.x, c.y - WALL_H / 2 + (96 - 110) / 2 / zoom);
   }
 
   cancelMode(): void {
@@ -123,8 +131,8 @@ export class ClubScene extends Phaser.Scene {
     let bestD = Infinity;
     for (const g of this.game_.sim.guests) {
       const p = gridToScreen(g.x, g.y, this.cfg);
-      if (Math.abs(x - p.x) < 13 && y < p.y + 3 && y > p.y - 48) {
-        const d = Math.abs(x - p.x) + Math.abs(y - (p.y - 22));
+      if (Math.abs(x - p.x) < 14 && y < p.y + 3 && y > p.y - 56) {
+        const d = Math.abs(x - p.x) + Math.abs(y - (p.y - 26));
         if (d < bestD) {
           bestD = d;
           best = g;
@@ -169,7 +177,8 @@ export class ClubScene extends Phaser.Scene {
   }
 
   private onGameEvent(e: GameEvent): void {
-    if (e.type === 'sale') this.floatText(e.x, e.y, `+$${e.paid}`, '#7dffa0');
+    if (e.type === 'sale') this.floatText(e.x, e.y, `$${e.paid}`, '#e0102a');
+    if (e.type === 'cover') this.floatText(e.x, e.y, `$${e.paid}`, '#e0102a');
     if (e.type === 'levelUp') {
       this.redrawRoom(true);
       this.centerCamera();
@@ -179,13 +188,17 @@ export class ClubScene extends Phaser.Scene {
   private floatText(gx: number, gy: number, text: string, color: string): void {
     const p = gridToScreen(gx, gy, this.cfg);
     const t = this.add
-      .text(p.x, p.y - 60, text, { fontFamily: 'Trebuchet MS, Arial, sans-serif', fontSize: '15px', fontStyle: 'bold', color, stroke: '#000', strokeThickness: 4 })
+      .text(p.x, p.y - 62, text, { fontFamily: 'Arial Black, Arial, sans-serif', fontSize: '16px', fontStyle: 'bold', color, stroke: '#ffffff', strokeThickness: 4 })
       .setOrigin(0.5)
       .setDepth(DEPTH_UI);
     this.tweens.add({ targets: t, y: t.y - 34, alpha: 0, duration: 1300, ease: 'Cubic.easeOut', onComplete: () => t.destroy() });
   }
 
-  /** Floor, walls and entrance. Redrawn only when the room size changes. */
+  /**
+   * Floor, walls, door and the street outside. Redrawn only when the room size
+   * changes. Style follows the reference screenshots (light-grey brick walls with
+   * a pale top cap, charcoal floor, dark street tiles outside) - original drawing.
+   */
   private redrawRoom(force = false): void {
     const { cols, rows } = this.game_.state.room;
     const key = `${cols}x${rows}`;
@@ -194,51 +207,93 @@ export class ClubScene extends Phaser.Scene {
     const g = this.floor;
     const cfg = this.cfg;
     g.clear();
-    // back walls (along row = 0 and col = 0)
+
+    // Street / sidewalk outside the club
+    const pad = 8;
+    for (let c = -pad; c < cols + pad; c++) {
+      for (let r = -pad; r < rows + pad; r++) {
+        if (c >= 0 && r >= 0 && c < cols && r < rows) continue;
+        const odd = (Math.floor(c / 2) + Math.floor(r / 2)) % 2 === 0;
+        drawTileDiamond(g, c, r, 1, 1, cfg, odd ? 0x26272c : 0x202126, 1, 0x34353c, 0.6);
+      }
+    }
+
+    // Room floor: charcoal tiles under a soft spotlight
+    const mid = { c: cols / 2, r: rows / 2 };
+    const maxD = Math.hypot(cols, rows) / 2;
+    for (let c = 0; c < cols; c++) {
+      for (let r = 0; r < rows; r++) {
+        const d = Math.hypot(c + 0.5 - mid.c, r + 0.5 - mid.r) / maxD;
+        const k = 1.55 - d * 0.75;
+        drawTileDiamond(g, c, r, 1, 1, cfg, shade(0x45464e, k), 1, shade(0x2c2d33, k), 0.9);
+      }
+    }
+
+    // Back walls: light grey brick with a pale cap (thick top edge)
     const o = gridToScreen(0, 0, cfg);
     const right = gridToScreen(cols, 0, cfg);
     const left = gridToScreen(0, rows, cfg);
-    g.fillStyle(0x161a33, 1);
-    g.fillPoints([o, right, { x: right.x, y: right.y - WALL_H }, { x: o.x, y: o.y - WALL_H }], true);
-    g.fillStyle(0x10132a, 1);
-    g.fillPoints([o, left, { x: left.x, y: left.y - WALL_H }, { x: o.x, y: o.y - WALL_H }], true);
-    // wall panels
-    g.lineStyle(1, 0x2a2f5a, 0.8);
-    for (let c = 1; c < cols; c++) {
-      const p = gridToScreen(c, 0, cfg);
-      g.lineBetween(p.x, p.y, p.x, p.y - WALL_H);
-    }
-    for (let r = 1; r < rows; r++) {
-      const p = gridToScreen(0, r, cfg);
-      g.lineBetween(p.x, p.y, p.x, p.y - WALL_H);
-    }
-    // neon trim
-    g.lineStyle(3, 0x00e5ff, 0.9);
-    g.lineBetween(o.x, o.y - WALL_H, right.x, right.y - WALL_H);
-    g.lineStyle(3, 0xff3df2, 0.9);
-    g.lineBetween(o.x, o.y - WALL_H, left.x, left.y - WALL_H);
-    g.lineStyle(2, 0x00e5ff, 0.35);
-    g.lineBetween(o.x, o.y - 30, right.x, right.y - 30);
-    g.lineStyle(2, 0xff3df2, 0.35);
-    g.lineBetween(o.x, o.y - 30, left.x, left.y - 30);
-    // floor
-    for (let c = 0; c < cols; c++) {
-      for (let r = 0; r < rows; r++) {
-        drawTileDiamond(g, c, r, 1, 1, cfg, (c + r) % 2 ? 0x1b1f3d : 0x20254a, 1, 0x2d3366, 0.6);
+    const wallTop = (p: { x: number; y: number }) => ({ x: p.x, y: p.y - WALL_H });
+    g.fillStyle(0x9a9ca4, 1);
+    g.fillPoints([o, right, wallTop(right), wallTop(o)], true);
+    g.fillStyle(0x7e8088, 1);
+    g.fillPoints([o, left, wallTop(left), wallTop(o)], true);
+    // brick courses
+    const course = 9;
+    for (let z = course; z < WALL_H; z += course) {
+      g.lineStyle(1, 0x6c6e76, 0.7);
+      g.lineBetween(o.x, o.y - z, right.x, right.y - z);
+      g.lineStyle(1, 0x5e6068, 0.7);
+      g.lineBetween(o.x, o.y - z, left.x, left.y - z);
+      const offset = (z / course) % 2 ? 0.5 : 0;
+      for (let c = offset; c < cols; c += 1) {
+        const p = gridToScreen(c, 0, cfg);
+        g.lineStyle(1, 0x6c6e76, 0.6);
+        g.lineBetween(p.x, p.y - z, p.x, p.y - z + course);
+      }
+      for (let r = offset; r < rows; r += 1) {
+        const p = gridToScreen(0, r, cfg);
+        g.lineStyle(1, 0x5e6068, 0.6);
+        g.lineBetween(p.x, p.y - z, p.x, p.y - z + course);
       }
     }
-    // front edge thickness
-    const fr = gridToScreen(cols, rows, cfg);
-    g.fillStyle(0x0b0d20, 1);
-    g.fillPoints([left, fr, { x: fr.x, y: fr.y + 12 }, { x: left.x, y: left.y + 12 }], true);
-    g.fillStyle(0x080a18, 1);
-    g.fillPoints([right, fr, { x: fr.x, y: fr.y + 12 }, { x: right.x, y: right.y + 12 }], true);
-    // entrance carpet
-    for (const c of reservedCells(this.game_.state.room)) drawTileDiamond(g, c.col, c.row, 1, 1, cfg, 0xa3122f, 0.9, 0xffd23f, 0.8);
+    // skirting shadow
+    g.fillStyle(0x000000, 0.25);
+    g.fillPoints([o, right, { x: right.x, y: right.y - 6 }, { x: o.x, y: o.y - 6 }], true);
+    g.fillPoints([o, left, { x: left.x, y: left.y - 6 }, { x: o.x, y: o.y - 6 }], true);
+    // pale wall cap
+    const capT = 7;
+    const capPts = (a: { x: number; y: number }, b: { x: number; y: number }, dx: number, dy: number) => [
+      wallTop(a),
+      wallTop(b),
+      { x: b.x + dx, y: b.y - WALL_H + dy },
+      { x: a.x + dx, y: a.y - WALL_H + dy },
+    ];
+    g.fillStyle(0xe4e6ea, 1);
+    g.fillPoints(capPts(o, right, -capT, -capT / 2), true);
+    g.fillStyle(0xd0d2d8, 1);
+    g.fillPoints(capPts(o, left, capT, -capT / 2), true);
+    g.lineStyle(1.5, 0x101014, 0.9);
+    g.strokePoints([wallTop(left), wallTop(o), wallTop(right)], false);
+    g.strokePoints([left, o, right], false);
+    g.lineBetween(right.x, right.y, right.x, right.y - WALL_H);
+    g.lineBetween(left.x, left.y, left.x, left.y - WALL_H);
+
+    // Door in the back wall at the entrance column
     const e = entranceCell(this.game_.state.room);
-    const ep = gridToScreen(e.col + 0.5, e.row + 1, cfg);
-    g.fillStyle(0xffd23f, 0.9);
-    g.fillTriangle(ep.x - 8, ep.y + 6, ep.x + 8, ep.y + 6, ep.x, ep.y - 4);
+    const d0 = gridToScreen(e.col + 0.12, 0, cfg);
+    const d1 = gridToScreen(e.col + 0.88, 0, cfg);
+    const doorH = 58;
+    g.fillStyle(0x3a3c44, 1);
+    g.fillPoints([d0, d1, { x: d1.x, y: d1.y - doorH - 4 }, { x: d0.x, y: d0.y - doorH - 4 }], true);
+    g.fillStyle(0x15161b, 1);
+    const i0 = gridToScreen(e.col + 0.2, 0, cfg);
+    const i1 = gridToScreen(e.col + 0.8, 0, cfg);
+    g.fillPoints([i0, i1, { x: i1.x, y: i1.y - doorH }, { x: i0.x, y: i0.y - doorH }], true);
+    g.fillStyle(0x3ddc84, 0.9);
+    g.fillCircle((d0.x + d1.x) / 2, (d0.y + d1.y) / 2 - doorH - 10, 3);
+    // entrance mat
+    for (const c of reservedCells(this.game_.state.room)) drawTileDiamond(g, c.col, c.row, 1, 1, cfg, 0x8a1020, 0.85, 0xc9a227, 0.7);
   }
 
   override update(): void {
@@ -302,25 +357,16 @@ export class ClubScene extends Phaser.Scene {
       const walking = guest.path.length > 0;
       const painter = new PhaserPainter(g);
       if (guest.id === selected) {
-        g.lineStyle(2, 0xffffff, 0.9);
-        g.strokeEllipse(p.x, p.y, 30, 12);
+        g.lineStyle(3, 0x2a7bff, 0.95);
+        g.strokeEllipse(p.x, p.y - 40, 32, 32);
       }
-      drawAvatar(painter, guest.appearance, p.x, p.y, 0.62, {
+      drawAvatar(painter, guest.appearance, p.x, p.y, 0.72, {
         phase,
         dancing,
         walking,
         arms: guest.state === 'DRINKING' ? 'drink' : dancing && guest.seed % 3 === 0 ? 'up' : 'down',
       });
-      // Mood / need bubble
-      const mood = moodOf(guest.happiness, tuning.happyThreshold, tuning.unhappyThreshold);
-      const bubble =
-        guest.state === 'QUEUING_FOR_BAR' || guest.state === 'THIRSTY' ? 0x7df9ff : mood === 'unhappy' ? 0xff4d4d : mood === 'happy' && dancing ? 0x7dffa0 : null;
-      if (bubble !== null) {
-        g.fillStyle(0xffffff, 0.95);
-        g.fillCircle(p.x + 10, p.y - 52, 6);
-        g.fillStyle(bubble, 1);
-        g.fillCircle(p.x + 10, p.y - 52, 4);
-      }
+      this.drawBubble(g, guest, p.x + 13, p.y - 74, playing);
     }
     for (const [id, g] of this.guestGfx) {
       if (!seen.has(id)) {
@@ -330,7 +376,51 @@ export class ClubScene extends Phaser.Scene {
     }
   }
 
-  /** The player avatar stands behind the best DJ booth and dances while a set plays. */
+  /**
+   * White speech bubble with a small icon (chat lines, drink, frown, exit arrow),
+   * modelled on the bubbles in the reference screenshots.
+   */
+  private drawBubble(g: Phaser.GameObjects.Graphics, guest: Guest, x: number, y: number, playing: boolean): void {
+    const mood = moodOf(guest.happiness, tuning.happyThreshold, tuning.unhappyThreshold);
+    let icon: 'chat' | 'drink' | 'frown' | 'exit' | null = null;
+    if (guest.state === 'LEAVING') icon = 'exit';
+    else if (guest.state === 'QUEUING_FOR_BAR' || guest.state === 'THIRSTY') icon = 'drink';
+    else if (mood === 'unhappy') icon = 'frown';
+    else if (guest.state === 'SITTING_OR_SOCIALIZING' || (!playing && guest.state === 'DANCING')) icon = (guest.seed % 2 === 0 ? 'chat' : null);
+    if (!icon) return;
+    g.fillStyle(0xffffff, 0.97);
+    g.lineStyle(1.5, 0x15121c, 0.9);
+    g.fillCircle(x, y, 9);
+    g.strokeCircle(x, y, 9);
+    g.fillTriangle(x - 5, y + 6, x + 1, y + 7, x - 7, y + 13);
+    switch (icon) {
+      case 'chat':
+        g.fillStyle(0x3a3c44, 1);
+        for (const dy of [-3.5, 0, 3.5]) g.fillRect(x - 5, y + dy - 0.9, 10, 1.8);
+        break;
+      case 'drink':
+        g.fillStyle(0x1fb6ff, 1);
+        g.fillTriangle(x - 5, y - 4, x + 5, y - 4, x, y + 2);
+        g.fillRect(x - 0.7, y + 1, 1.4, 4);
+        g.fillRect(x - 3, y + 4.5, 6, 1.2);
+        break;
+      case 'frown':
+        g.fillStyle(0xe0102a, 1);
+        g.fillCircle(x, y, 6);
+        g.fillStyle(0xffffff, 1);
+        g.fillCircle(x - 2.2, y - 1.5, 1.1);
+        g.fillCircle(x + 2.2, y - 1.5, 1.1);
+        g.fillRect(x - 2.5, y + 2.2, 5, 1.2);
+        break;
+      case 'exit':
+        g.fillStyle(0xe0102a, 1);
+        g.fillRect(x - 4, y - 4, 6, 8);
+        g.fillTriangle(x + 1, y - 4, x + 6, y, x + 1, y + 4);
+        break;
+    }
+  }
+
+  /** The player avatar stands behind the best DJ booth, in headphones, dancing while a set plays. */
   private drawDj(state: ClubState, now: number, playing: boolean): void {
     const g = this.djAvatar;
     g.clear();
@@ -339,11 +429,17 @@ export class ClubScene extends Phaser.Scene {
     const { w, h } = footprintSize(booth.catalogId, booth.facing);
     const back = booth.facing === 0 ? gridToScreen(booth.col + w / 2, booth.row + 0.05, this.cfg) : gridToScreen(booth.col + 0.05, booth.row + h / 2, this.cfg);
     g.setDepth((depthFor(booth.col, booth.row, w, h) - 1) * 100 - 1);
-    drawAvatar(new PhaserPainter(g), state.appearance, back.x, back.y, 0.75, {
+    if (playing) {
+      // blue spotlight ring around the DJ, as in the reference screenshots
+      g.lineStyle(3, 0x2a7bff, 0.9);
+      g.strokeCircle(back.x, back.y - 58, 24);
+    }
+    drawAvatar(new PhaserPainter(g), state.appearance, back.x, back.y, 0.76, {
       phase: (now / 700) % 1,
       dancing: playing,
       walking: false,
-      arms: playing ? 'up' : 'down',
+      arms: playing ? 'headphones' : 'down',
+      headphones: true,
     });
   }
 

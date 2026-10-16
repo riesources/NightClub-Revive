@@ -1,7 +1,7 @@
 import { appearanceFromSeed } from '../../data/appearanceCatalog';
 import { getFurnitureDef } from '../../data/furnitureCatalog';
 import { tuning } from '../../data/tuning';
-import { serveDrink } from '../bar';
+import { chargeCover, serveDrink } from '../bar';
 import { adjustPopularity, clone, computeLuxury, guestCapacity } from '../club';
 import { isPlaying } from '../dj';
 import { adjacentWalkableCells, blockedCells, cellKey, entranceCell, inBounds, instanceCells } from '../grid';
@@ -20,7 +20,8 @@ export interface SimHost {
 
 export type SimEvent =
   | { type: 'sale'; guestId: string; paid: number; tip: number; x: number; y: number }
-  | { type: 'levelUp'; level: number }
+  | { type: 'cover'; guestId: string; paid: number; x: number; y: number }
+  | { type: 'levelUp'; level: number; reward: number }
   | { type: 'outOfDrinks' }
   | { type: 'noBartender' }
   | { type: 'guestLeft'; guestId: string; happy: boolean };
@@ -32,6 +33,14 @@ interface WorldCache {
   seats: { id: string; cells: GridPoint[] }[];
   staffedBars: { id: string; cells: GridPoint[] }[];
   luxury: number;
+}
+
+const FIRST = ['Alex', 'Bree', 'Cass', 'Dani', 'Eli', 'Fay', 'Gus', 'Hana', 'Ivo', 'Jade', 'Kip', 'Lia', 'Milo', 'Nia', 'Oz', 'Pia', 'Quin', 'Rae', 'Sol', 'Tex', 'Uma', 'Vic', 'Wren', 'Yuki', 'Zed'];
+const LAST = ['Vance', 'Okafor', 'Reyes', 'Lindqvist', 'Moreau', 'Tanaka', 'Novak', 'Haddad', 'Quinn', 'Silva', 'Brandt', 'Kowal', 'Achebe', 'Duval', 'Ferro'];
+
+/** PROPOSED: fictional generated guest names. */
+export function guestName(seed: number): string {
+  return `${FIRST[seed % FIRST.length]} ${LAST[Math.floor(seed / FIRST.length) % LAST.length]}`;
 }
 
 export class GuestSimulation {
@@ -77,6 +86,10 @@ export class GuestSimulation {
     const seed = Math.floor(this.rng() * 1e9);
     const g: Guest = {
       id: `g${++this.counter}`,
+      name: guestName(seed),
+      spent: 0,
+      tipRate: Math.round((tuning.tipRateMin + this.rng() * (tuning.tipRateMax - tuning.tipRateMin)) * 100) / 100,
+      guestClass: 'Regular',
       seed,
       appearance: appearanceFromSeed(seed),
       prefGenre: pickOne(this.rng, GENRES)!,
@@ -126,7 +139,13 @@ export class GuestSimulation {
     let state = host.getState();
 
     if (this.spawnEnabled && now >= this.nextSpawnAt && this.guests.length < guestCapacity(state)) {
-      this.spawn(state, now);
+      const g = this.spawn(state, now);
+      const cover = chargeCover(state);
+      g.spent += cover.paid;
+      host.commit(cover.state);
+      state = cover.state;
+      host.emit({ type: 'cover', guestId: g.id, paid: cover.paid, x: g.x, y: g.y });
+      if (cover.leveledUp) host.emit({ type: 'levelUp', level: cover.state.level, reward: cover.reward });
       this.nextSpawnAt = now + this.spawnInterval(state, now) * (0.6 + this.rng() * 0.8);
     }
 
@@ -370,15 +389,16 @@ export class GuestSimulation {
       }
       if (now < Math.max(this.nextServeAt.get(barId) ?? 0, g.queuedAt + tuning.serveDurationMs)) continue;
       const luxury = this.world(state).luxury;
-      const res = serveDrink(state, g.order, g.happiness, luxury);
+      const res = serveDrink(state, g.order, g.happiness, luxury, g.tipRate);
       queue.shift();
       g.barId = null;
       g.order = null;
       if (res.ok) {
         host.commit(res.state);
         state = res.state;
+        g.spent += res.paid;
         host.emit({ type: 'sale', guestId: g.id, paid: res.paid, tip: res.tip, x: g.x, y: g.y });
-        if (res.leveledUp) host.emit({ type: 'levelUp', level: res.state.level });
+        if (res.leveledUp) host.emit({ type: 'levelUp', level: res.state.level, reward: res.reward });
         g.thirst = 0;
         g.happiness = Math.min(100, g.happiness + 8);
         this.setState(g, 'DRINKING', now);

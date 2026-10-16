@@ -15,6 +15,8 @@ export class Interaction {
   mode: Mode = { kind: 'normal' };
   selection: Selection = null;
   debug = false;
+  /** Set by the scene so DOM zoom buttons can drive the camera. */
+  zoomBy?: (factor: number) => void;
   private listeners = new Set<Listener>();
 
   setMode(mode: Mode): void {

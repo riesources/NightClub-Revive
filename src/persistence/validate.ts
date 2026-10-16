@@ -12,7 +12,7 @@ export function validateState(d: Record<string, unknown>): { ok: true; state: Cl
   const bad = (reason: string) => ({ ok: false as const, reason });
   if (d.schemaVersion !== SCHEMA_VERSION) return bad('Wrong schema version');
   for (const k of ['cash', 'totalEarned', 'xp', 'popularity', 'nextId'] as const) if (!isInt(d[k])) return bad(`Invalid ${k}`);
-  if (!isInt(d.level, 1)) return bad('Invalid level');
+  if (!isInt(d.level, 0)) return bad('Invalid level');
   const room = d.room as ClubState['room'];
   if (!room || !isInt(room.cols, 4) || !isInt(room.rows, 4) || room.cols > 64 || room.rows > 64) return bad('Invalid room');
   if (!isValidAppearance(d.appearance)) return bad('Invalid appearance');

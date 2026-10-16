@@ -29,6 +29,10 @@ npm run smoke       # needs a prior build; drives the real app in headless Chrom
 | Corrupt save: 7 corruption cases are backed up and reported, never crash | `persistence.test.ts`, smoke (real reload + notice) |
 | Migrations run in order; a missing step fails cleanly | `persistence.test.ts` |
 | Dressing room: Cancel doesn't persist, Save does | smoke |
+| Cover charge ($5 base), level-1 reward ($500), starter values ($5,000 / 10 / 116), worker-slot levels | `barDjStaff.test.ts` |
+| v1 → v2 migration on a real v1 save | `persistence.test.ts` |
+| Music follows the DJ set genre | smoke |
+| DJ card, guest card and Workers panel work through real clicks | smoke |
 | Tutorial stays dismissed after reload | smoke |
 | No console errors | smoke |
 

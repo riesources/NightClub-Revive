@@ -21,14 +21,19 @@ export function instanceCells(f: FurnitureInstance): GridPoint[] {
   return footprintCells(f.catalogId, f.col, f.row, f.facing);
 }
 
-/** PROPOSED: the entrance sits on the front edge, centred. It and the cell behind it stay clear. */
-export function entranceCell(room: { cols: number; rows: number }): GridPoint {
-  return { col: Math.floor(room.cols / 2), row: room.rows - 1 };
+/**
+ * The entrance is a door in the back wall (row 0), as in the original screenshots
+ * (INFERRED position). It is fixed so room expansion never moves it. The door cell
+ * and the cell in front of it stay clear.
+ */
+export const ENTRANCE: GridPoint = { col: 6, row: 0 };
+
+export function entranceCell(_room?: { cols: number; rows: number }): GridPoint {
+  return ENTRANCE;
 }
 
-export function reservedCells(room: { cols: number; rows: number }): GridPoint[] {
-  const e = entranceCell(room);
-  return [e, { col: e.col, row: e.row - 1 }];
+export function reservedCells(_room?: { cols: number; rows: number }): GridPoint[] {
+  return [ENTRANCE, { col: ENTRANCE.col, row: ENTRANCE.row + 1 }];
 }
 
 export function inBounds(room: { cols: number; rows: number }, p: GridPoint): boolean {

@@ -10,21 +10,30 @@
  */
 export const tuning = {
   // --- Room / grid ----------------------------------------------------------
-  /** PROPOSED: starter room size in tiles. The original expanded with level. */
-  startRoomCols: 12,
-  startRoomRows: 12,
+  /** PROPOSED: starter room size in tiles (starter club in screenshots is small). */
+  startRoomCols: 10,
+  startRoomRows: 10,
 
   // --- Economy --------------------------------------------------------------
-  /** PROPOSED */
+  /** CONFIRMED (Pixnet tutorial screenshot shows $5,000 at level 0). */
   startingCash: 5000,
+  /** CONFIRMED (screenshot): starting popularity 10. */
+  startingPopularity: 10,
+  /**
+   * CONFIRMED (tutorial screenshot): "Your Guests pay a $5 cover charge at the door ...
+   * As your Popularity increases, they'll be paying a lot more!" Scaling is PROPOSED.
+   */
+  coverChargeBase: 5,
+  coverChargePerPopularity: 0.05,
   /** PROPOSED: share of the purchase price refunded on sell. */
   sellRefundRatio: 0.5,
   /** PROPOSED: price a guest pays per drink. */
   drinkPrice: 12,
-  /** PROPOSED: max tip at 100 happiness, before the luxury multiplier. */
-  baseTipMax: 10,
-  /** PROPOSED: each luxury point adds this fraction to tips (GameYum: luxury raises tips - INFERRED direction). */
-  luxuryTipFactor: 0.002,
+  /** PROPOSED: guest tip rates (the guest card shows e.g. "Tip Rate: 12%" - CONFIRMED field). */
+  tipRateMin: 0.05,
+  tipRateMax: 0.3,
+  /** PROPOSED: each luxury point adds this fraction to tips (GameYum: luxury raises tips). */
+  luxuryTipFactor: 0.004,
 
   // --- Bar / drinks ---------------------------------------------------------
   /** CONFIRMED (Gamezebo walkthrough): a restock adds 100 drinks. */

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { MusicPlayer } from './audio/music';
 import { tuning } from './data/tuning';
 import { createNewClub } from './domain/club';
 import { Game } from './domain/game';
@@ -47,7 +48,13 @@ function boot(): void {
   window.addEventListener('pagehide', saveNow);
   if (loaded.status !== 'ok') saveNow();
 
-  const ui = new UI(game, ix, repo, document.getElementById('ui')!);
+  const music = new MusicPlayer();
+  try {
+    music.muted = localStorage.getItem('nightclub-revive.muted') === '1';
+  } catch {
+    /* per-viewer preference only */
+  }
+  const ui = new UI(game, ix, repo, music, document.getElementById('ui')!);
   const scene = new ClubScene(game, ix, {
     onSelectGuest: (id) => ui.selectGuest(id),
     onSelectFurniture: (id) => ui.selectFurniture(id),
@@ -74,7 +81,7 @@ function boot(): void {
   if (!persistent) ui.toast('Browser storage is unavailable - progress will not be saved.', 'error', 6000);
 
   // Dev/test hook for automated smoke tests.
-  (window as unknown as { __ncr: unknown }).__ncr = { game, ix, repo };
+  (window as unknown as { __ncr: unknown }).__ncr = { game, ix, repo, music };
 }
 
 boot();

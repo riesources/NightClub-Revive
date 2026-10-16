@@ -19,19 +19,31 @@ export interface DrinkOrder {
   status: 'pending' | 'served' | 'failed';
 }
 
-/** PROPOSED tip: scales with happiness (0-100) and the club's luxury. */
-export function tipFor(happiness: number, luxury: number): number {
-  const h = Math.max(0, Math.min(100, happiness)) / 100;
-  return Math.floor(tuning.baseTipMax * h * (1 + luxury * tuning.luxuryTipFactor));
+/** PROPOSED tip: drink price x the guest's tip rate, scaled by happiness (0-100) and luxury. */
+export function tipFor(happiness: number, luxury: number, tipRate = 0.15): number {
+  const h = Math.max(0, Math.min(100, happiness)) / 60;
+  return Math.round(tuning.drinkPrice * tipRate * h * (1 + luxury * tuning.luxuryTipFactor));
 }
 
-export type ServeResult = { ok: true; state: ClubState; paid: number; tip: number; leveledUp: boolean } | { ok: false; reason: string };
+/** Cover charge at the door: $5 base CONFIRMED, popularity scaling PROPOSED. */
+export function coverCharge(popularity: number): number {
+  return tuning.coverChargeBase + Math.floor(popularity * tuning.coverChargePerPopularity);
+}
+
+export function chargeCover(state: ClubState): { state: ClubState; paid: number; leveledUp: boolean; reward: number } {
+  const draft = clone(state);
+  const paid = coverCharge(state.popularity);
+  const { leveledUp, reward } = creditIncome(draft, paid);
+  return { state: draft, paid, leveledUp, reward };
+}
+
+export type ServeResult = { ok: true; state: ClubState; paid: number; tip: number; leveledUp: boolean; reward: number } | { ok: false; reason: string };
 
 /**
  * Serve one drink for an order. Exactly once per order: stock -1, cash += price + tip.
  * The order object is marked so a repeated call is rejected.
  */
-export function serveDrink(state: ClubState, order: DrinkOrder, happiness: number, luxury: number): ServeResult {
+export function serveDrink(state: ClubState, order: DrinkOrder, happiness: number, luxury: number, tipRate = 0.15): ServeResult {
   if (order.status !== 'pending') return { ok: false, reason: 'Order already processed' };
   if (state.stock.drinks <= 0) {
     order.status = 'failed';
@@ -39,11 +51,11 @@ export function serveDrink(state: ClubState, order: DrinkOrder, happiness: numbe
   }
   const draft = clone(state);
   draft.stock.drinks -= 1;
-  const tip = tipFor(happiness, luxury);
+  const tip = tipFor(happiness, luxury, tipRate);
   const paid = tuning.drinkPrice + tip;
-  const { leveledUp } = creditIncome(draft, paid);
+  const { leveledUp, reward } = creditIncome(draft, paid);
   draft.stats.drinksSold += 1;
   draft.stats.tipsEarned += tip;
   order.status = 'served';
-  return { ok: true, state: draft, paid, tip, leveledUp };
+  return { ok: true, state: draft, paid, tip, leveledUp, reward };
 }

@@ -9,8 +9,8 @@ describe('save / load', () => {
   it('round-trips cash, appearance, layout, staff, stock, DJ and progression', () => {
     const store = new MemoryStore();
     const repo = new LocalSaveRepository(store, () => 42);
-    let s = createNewClub(0);
-    const b = buyAndPlace(s, 'sofa_red', 9, 9);
+    let s = { ...createNewClub(0), level: 1 };
+    const b = buyAndPlace(s, 'sofa_red', 7, 7);
     if (!b.ok) throw new Error(b.reason);
     s = b.state;
     const p = startSet(s, 'hiphop', 1000);
@@ -59,6 +59,44 @@ describe('save / load', () => {
       removeItem: () => {},
     });
     expect(repo.load().status).toBe('corrupt');
+  });
+});
+
+describe('v1 -> v2 migration', () => {
+  const v1 = {
+    schemaVersion: 1,
+    cash: 1000,
+    totalEarned: 0,
+    xp: 0,
+    level: 1,
+    popularity: 0,
+    room: { cols: 12, rows: 12 },
+    furniture: [
+      { id: 'f1', catalogId: 'bar_basic', col: 5, row: 0, facing: 0 }, // covers (6,0): the new door
+      { id: 'f2', catalogId: 'stool_basic', col: 2, row: 8, facing: 0 },
+      { id: 'f3', catalogId: 'dj_starter', col: 0, row: 4, facing: 0 },
+    ],
+    staff: [{ id: 's1', role: 'bartender', name: 'Rico', barId: 'f1' }],
+    appearance: { skin: '#e8b48a', hairStyle: 'spiky', hairColor: '#b5651d', top: '#00e5ff', bottom: '#1f2a44' },
+    dj: { genre: 'pop', setStartedAt: null, setEndsAt: null, lastDropBassAt: null, lastDedicateAt: null },
+    stock: { drinks: 50 },
+    stats: { drinksSold: 0, guestsVisited: 0, tipsEarned: 0 },
+    tutorialDismissed: true,
+    nextId: 4,
+    savedAt: 0,
+  };
+
+  it('loads a real v1 save: palettes remapped, gender/shoes added, door cleared with refund', () => {
+    const store = new MemoryStore();
+    store.setItem(SAVE_KEY, JSON.stringify(v1));
+    const r = new LocalSaveRepository(store).load();
+    expect(r.status).toBe('ok');
+    if (r.status !== 'ok') return;
+    expect(r.state.schemaVersion).toBe(2);
+    expect(r.state.appearance).toEqual({ gender: 'm', shoes: '#ffffff', skin: '#f2c9a0', hairStyle: 'spiky', hairColor: '#a0522d', top: '#00c8ff', bottom: '#1f2a44' });
+    expect(r.state.furniture.map((f) => f.catalogId)).toEqual(['stool_red', 'dj_starter']);
+    expect(r.state.cash).toBe(1000 + 600);
+    expect(r.state.staff[0].barId).toBe(null);
   });
 });
 

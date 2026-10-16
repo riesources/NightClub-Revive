@@ -20,8 +20,8 @@ export function createNewClub(now = Date.now()): ClubState {
     cash: tuning.startingCash,
     totalEarned: 0,
     xp: 0,
-    level: 1,
-    popularity: 0,
+    level: 0,
+    popularity: tuning.startingPopularity,
     room: { cols: tuning.startRoomCols, rows: tuning.startRoomRows },
     furniture: [],
     staff: [],
@@ -38,16 +38,14 @@ export function createNewClub(now = Date.now()): ClubState {
     state.furniture.push(f);
     return f;
   };
-  add('dj_starter', 5, 0);
+  // Starter layout modelled on the level-0 club in the tutorial screenshots:
+  // DJ booth flanked by speakers in the back-left corner, a small cyan dance
+  // floor in front of it, and one bar along the right-hand wall (INFERRED).
+  add('speaker_basic', 0, 0);
+  add('dj_starter', 1, 0);
   add('speaker_basic', 3, 0);
-  add('speaker_basic', 8, 0);
-  for (let c = 4; c <= 7; c++) for (let r = 2; r <= 5; r++) add((c + r) % 2 ? 'floor_neon_purple' : 'floor_neon_blue', c, r);
-  const bar = add('bar_basic', 0, 3, 1);
-  add('stool_basic', 0, 7);
-  add('stool_basic', 0, 8);
-  add('sofa_red', 9, 7);
-  add('plant_palm', 11, 0);
-  add('plant_palm', 0, 0);
+  for (let c = 0; c <= 3; c++) for (let r = 1; r <= 3; r++) add('floor_neon_blue', c, r);
+  const bar = add('bar_basic', 8, 0);
   // PROPOSED: start with one bartender (Gamezebo advises hiring one early; we pre-hire to keep P0 playable).
   state.staff.push({ id: newId(state, 's'), role: 'bartender', name: 'Rico', barId: bar.id });
   return state;

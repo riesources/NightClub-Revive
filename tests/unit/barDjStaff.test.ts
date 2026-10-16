@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { refillDrinks, serveDrink, tipFor, type DrinkOrder } from '../../src/domain/bar';
-import { createNewClub } from '../../src/domain/club';
+import { chargeCover, coverCharge, refillDrinks, serveDrink, tipFor, type DrinkOrder } from '../../src/domain/bar';
+import { computeLuxury, createNewClub } from '../../src/domain/club';
 import * as dj from '../../src/domain/dj';
 import { sellFurniture } from '../../src/domain/economy';
 import { creditIncome, levelForXp } from '../../src/domain/progression';
-import { assignBartender, bartenderForBar, hireBartender } from '../../src/domain/staff';
+import { assignBartender, bartenderForBar, hireBartender, workerSlots } from '../../src/domain/staff';
 import { LEVEL_XP } from '../../src/data/progression';
 import { tuning } from '../../src/data/tuning';
 
@@ -99,7 +99,37 @@ describe('DJ set', () => {
   });
 });
 
+describe('cover charge', () => {
+  it('is the confirmed $5 base and grows with popularity', () => {
+    expect(coverCharge(0)).toBe(5);
+    expect(coverCharge(200)).toBeGreaterThan(5);
+  });
+
+  it('credits income once per charge', () => {
+    const s = createNewClub(0);
+    const r = chargeCover(s);
+    expect(r.state.cash).toBe(s.cash + r.paid + r.reward);
+    expect(r.state.totalEarned).toBe(r.paid);
+    expect(s.totalEarned).toBe(0);
+  });
+});
+
 describe('staff', () => {
+  it('worker slots follow the confirmed 2 + levels 9/13/17/21 pattern', () => {
+    expect(workerSlots(0)).toBe(2);
+    expect(workerSlots(8)).toBe(2);
+    expect(workerSlots(9)).toBe(3);
+    expect(workerSlots(21)).toBe(6);
+  });
+
+  it('cannot hire beyond open worker slots', () => {
+    let s = createNewClub(0);
+    const h1 = hireBartender(s);
+    if (!h1.ok) throw new Error(h1.reason);
+    s = h1.state;
+    expect(hireBartender(s).ok).toBe(false);
+  });
+
   it('hiring charges once and adds an unassigned bartender', () => {
     const s = createNewClub(0);
     const r = hireBartender(s);
@@ -123,16 +153,36 @@ describe('staff', () => {
 
   it('cannot assign a bartender to a non-bar', () => {
     const s = createNewClub(0);
-    const sofa = s.furniture.find((f) => f.catalogId === 'sofa_red')!;
-    expect(assignBartender(s, s.staff[0].id, sofa.id).ok).toBe(false);
+    const speaker = s.furniture.find((f) => f.catalogId === 'speaker_basic')!;
+    expect(assignBartender(s, s.staff[0].id, speaker.id).ok).toBe(false);
   });
 });
 
 describe('progression', () => {
-  it('level boundaries are exact', () => {
-    expect(levelForXp(0)).toBe(1);
+  it('level boundaries are exact; play starts at level 0', () => {
+    expect(levelForXp(0)).toBe(0);
+    expect(levelForXp(LEVEL_XP[1] - 1)).toBe(0);
+    expect(levelForXp(LEVEL_XP[1])).toBe(1);
     expect(levelForXp(LEVEL_XP[2] - 1)).toBe(1);
     expect(levelForXp(LEVEL_XP[2])).toBe(2);
+  });
+
+  it('reaching level 1 pays the confirmed $500 once, without extra XP', () => {
+    const s = createNewClub(0);
+    const cash0 = s.cash;
+    const r = creditIncome(s, LEVEL_XP[1]);
+    expect(r).toEqual({ leveledUp: true, reward: 500 });
+    expect(s.cash).toBe(cash0 + LEVEL_XP[1] + 500);
+    expect(s.xp).toBe(LEVEL_XP[1]);
+    expect(creditIncome(s, 1).leveledUp).toBe(false);
+  });
+
+  it('starter club matches the confirmed level-0 HUD: $5,000, 10 popularity, 116 luxury', () => {
+    const s = createNewClub(0);
+    expect(s.cash).toBe(5000);
+    expect(s.popularity).toBe(10);
+    expect(computeLuxury(s)).toBe(116);
+    expect(s.level).toBe(0);
   });
 
   it('income tracks lifetime earnings separately from cash and expands the room on level-up', () => {
