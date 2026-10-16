@@ -1,5 +1,26 @@
 # Build Log
 
+## 2026-10-16 — Bouncer fix: he now walks over and handles trouble
+
+**Problem (reported by the user):** the bouncer didn't seem to do his job. A seeded simulation of the starter club confirmed it:
+- only 28% of troublemakers started inside the bouncer's area, because the default post was by the door and his area was only 7×7;
+- 1 in 10 troublemakers ran loose for 15+ seconds (worst case 45 s), and some stormed out, costing popularity;
+- the bouncer never moved. A troublemaker in his area just vanished while he faded out at his post, so it was easy to miss that he did anything.
+
+**Changed**
+- Bouncers now **walk** to the troublemaker (pathfinding, a little faster than guests), escort them out with "BOUNCED!", then walk back to their post. The troublemaker stops and waits while the bouncer comes, and stops upsetting guests.
+- **Send Bouncer** sends the nearest free bouncer, who walks over the same way.
+- A new bouncer is posted in the **middle of the club** (nearest free tile), not by the door. His area grows from 7×7 to **9×9** (radius 4), and his rest after an escort drops from 6 s to 3 s. All PROPOSED.
+- Clearer warning: it says whether the troublemaker is outside your bouncer's area (Send Bouncer or move his post), or that you have no bouncer at all.
+
+**Result (same simulation, 5 seeds × 56 minutes):** 58% start inside the area (was 28%), every troublemaker handled (was 448/450), 90% within 3 s including the walk (was 14.6 s), worst case 11.5 s (was 45 s).
+
+**Commands run and results**
+- `npx vitest run`: 98/98 passed (3 new or rewritten bouncer tests: walk-escort-return, waiting troublemaker doesn't time out or drain happiness, Send Bouncer busy/already-on-the-way).
+- `npm run build`: passes.
+- `node scripts/smoke.mjs`: see the PR (new check: in the real app a bouncer walks to a troublemaker and escorts them out).
+
+
 ## 2026-10-16 — Level / progress screen
 
 **Added**

@@ -486,8 +486,11 @@ export class ClubScene extends Phaser.Scene {
     const seen = new Set<string>();
     for (const s of state.staff) {
       let at: { x: number; y: number; depth: number } | null = null;
+      let walking = false;
       if (s.role === 'bouncer' && s.post) {
-        at = { x: s.post.col + 0.5, y: s.post.row + 0.5, depth: (s.post.col + s.post.row + 1) * 100 + 50 };
+        const pos = this.game_.sim.bouncerAt(s.id) ?? { x: s.post.col + 0.5, y: s.post.row + 0.5, moving: false };
+        walking = pos.moving;
+        at = { x: pos.x, y: pos.y, depth: (Math.floor(pos.x) + Math.floor(pos.y) + 1) * 100 + 50 };
       } else if (s.role === 'bartender' && s.barId) {
         const bar = state.furniture.find((f) => f.id === s.barId);
         if (bar) {
@@ -507,12 +510,10 @@ export class ClubScene extends Phaser.Scene {
       g.clear();
       g.setDepth(at.depth);
       const p = gridToScreen(at.x, at.y, this.cfg);
-      const busy = s.role === 'bouncer' && (this.game_.sim.bouncerBusyUntil.get(s.id) ?? 0) > now;
-      g.setAlpha(busy ? 0.45 : 1);
       drawAvatar(new PhaserPainter(g), staffAppearance(s), p.x, p.y, 0.74, {
-        phase: (now / 1100 + s.id.length) % 1,
+        phase: walking ? (now / 380) % 1 : (now / 1100 + s.id.length) % 1,
         dancing: false,
-        walking: false,
+        walking,
         arms: s.role === 'bartender' ? 'drink' : 'down',
         shades: s.role === 'bouncer',
       });

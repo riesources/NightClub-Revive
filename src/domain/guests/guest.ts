@@ -62,6 +62,8 @@ export interface Guest {
   escorted: boolean;
   /** Stormed out on their own after making trouble (costs popularity). */
   troubleUnresolved: boolean;
+  /** Staff id of the bouncer walking over to escort this troublemaker. */
+  caughtBy: string | null;
   seed: number;
   appearance: AvatarAppearance;
   prefGenre: Genre;

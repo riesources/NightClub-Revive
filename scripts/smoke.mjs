@@ -146,6 +146,23 @@ try {
   await page.screenshot({ path: `${SHOTS}/06-workers.png` });
   await page.click('.panel-tabbed .btn.ok');
 
+  // The bouncer walks over to a troublemaker and escorts them out on his own
+  const bouncerJob = await page.evaluate(async () => {
+    const { game } = window.__ncr;
+    const id = game.state.staff[1].id;
+    const g = game.sim.spawn(game.state, Date.now());
+    g.troublemaker = true;
+    g.troubleAt = Date.now();
+    let moved = false;
+    const start = Date.now();
+    while (Date.now() - start < 20000 && !g.escorted) {
+      await new Promise((r) => setTimeout(r, 100));
+      if (game.sim.bouncerAt(id)?.moving) moved = true;
+    }
+    return { escorted: g.escorted, moved };
+  });
+  check('a bouncer walks to a troublemaker in his area and escorts them out', bouncerJob.escorted && bouncerJob.moved, JSON.stringify(bouncerJob));
+
   // Celebrities: panel opens from the dock star and books a VIP
   await page.evaluate(() => {
     const { game } = window.__ncr;

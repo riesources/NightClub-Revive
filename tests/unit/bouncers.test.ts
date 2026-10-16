@@ -43,12 +43,12 @@ function run(game: Game, from: number, ms: number, until?: () => boolean): numbe
 }
 
 describe('bouncer staff rules', () => {
-  it('switching a bartender to bouncer frees the bar and posts them inside the door', () => {
+  it('switching a bartender to bouncer frees the bar and posts them in the middle of the club', () => {
     const s = createNewClub(0);
     const r = switchRole(s, s.staff[0].id);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.staff[0]).toMatchObject({ role: 'bouncer', barId: null, post: { col: 6, row: 2 } });
+    expect(r.state.staff[0]).toMatchObject({ role: 'bouncer', barId: null, post: { col: 5, row: 5 } });
     const back = switchRole(r.state, s.staff[0].id);
     expect(back.ok && back.state.staff[0]).toMatchObject({ role: 'bartender', post: null });
   });
@@ -114,15 +114,69 @@ describe('troublemakers', () => {
     expect(game.sim.illegalTransitions).toBe(0);
   });
 
-  it('Send Bouncer works anywhere, once per cooldown', () => {
-    const { game } = quietGame({ col: 0, row: 9 }); // far corner, nowhere near the door
+  it('Send Bouncer works anywhere: the bouncer walks over, escorts, and is busy meanwhile', () => {
+    const { game, events } = quietGame({ col: 0, row: 9 }); // far corner, nowhere near the door
     const a = troublemaker(game, T0);
     const b = troublemaker(game, T0);
-    const t = run(game, T0, 2000, () => a.state === 'TROUBLEMAKER' && b.state === 'TROUBLEMAKER');
+    let t = run(game, T0, 2000, () => a.state === 'TROUBLEMAKER' && b.state === 'TROUBLEMAKER');
     expect(game.sendBouncer(a.id, t).ok).toBe(true);
+    expect(a.caughtBy).toBe(game.state.staff[0].id);
+    expect(game.sendBouncer(a.id, t).ok).toBe(false); // already on the way
+    expect(game.sendBouncer(b.id, t + 10).ok).toBe(false); // busy with a
+    t = run(game, t, 20_000, () => a.escorted);
     expect(a.escorted).toBe(true);
-    expect(game.sendBouncer(b.id, t + 10).ok).toBe(false); // busy escorting
+    expect(events.some((e) => e.type === 'bounced' && e.guestId === a.id)).toBe(true);
     expect(game.sendBouncer(b.id, t + tuning.bouncerCooldownMs + 10).ok).toBe(true);
+  });
+
+  it('the bouncer walks to the troublemaker, who waits, then walks back to the post', () => {
+    const post = { col: 2, row: 8 };
+    const { game } = quietGame(post);
+    const id = game.state.staff[0].id;
+    const g = troublemaker(game, T0);
+    // Arrives at the door (6,1), outside the area (radius 4 around (2,8)): nobody reacts yet.
+    let t = run(game, T0, 2000, () => g.state === 'TROUBLEMAKER');
+    g.path = [];
+    g.x = 6.5;
+    g.y = 1.5;
+    expect(game.sendBouncer(g.id, t).ok).toBe(true);
+    const start = { ...game.sim.bouncerAt(id)! };
+    t = run(game, t, 600);
+    const mid = game.sim.bouncerAt(id)!;
+    expect(mid.moving).toBe(true);
+    expect(Math.hypot(mid.x - start.x, mid.y - start.y)).toBeGreaterThan(0.5);
+    expect(g.x).toBe(6.5); // waits for the bouncer
+    t = run(game, t, 20_000, () => g.escorted);
+    const at = game.sim.bouncerAt(id)!;
+    expect(Math.hypot(at.x - g.x, at.y - g.y)).toBeLessThanOrEqual(tuning.bouncerReach + 0.01);
+    run(game, t, 20_000, () => {
+      const p = game.sim.bouncerAt(id)!;
+      return !p.moving && Math.floor(p.x) === post.col && Math.floor(p.y) === post.row;
+    });
+    const home = game.sim.bouncerAt(id)!;
+    expect([Math.floor(home.x), Math.floor(home.y)]).toEqual([post.col, post.row]);
+    expect(game.sim.illegalTransitions).toBe(0);
+  });
+
+  it('a troublemaker being walked to does not time out or keep upsetting guests', () => {
+    const { game, events } = quietGame({ col: 2, row: 8 });
+    const g = troublemaker(game, T0);
+    let t = run(game, T0, 2000, () => g.state === 'TROUBLEMAKER');
+    g.path = [];
+    g.x = 6.5;
+    g.y = 1.5;
+    game.sendBouncer(g.id, t);
+    const bystander = game.sim.spawn(game.state, t);
+    bystander.troublemaker = false;
+    bystander.x = g.x;
+    bystander.y = g.y;
+    const h0 = bystander.happiness;
+    game.tick((t += 50));
+    game.tick((t += 500));
+    expect(bystander.happiness).toBeGreaterThanOrEqual(h0 - 0.5);
+    run(game, t, tuning.troubleMaxMs + 10_000, () => !game.sim.guests.includes(g));
+    expect(events.some((e) => e.type === 'troubleUnresolved')).toBe(false);
+    expect(g.escorted).toBe(true);
   });
 
   it('Send Bouncer is refused with no bouncer or for an ordinary guest', () => {

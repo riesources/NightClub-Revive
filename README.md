@@ -90,7 +90,7 @@ The game is written in **TypeScript** and runs in any modern web browser.
 - Chibi guests who pay a $5 cover, dance, queue at bars, buy drinks and tip, with a guest card showing Spent / Tip Rate / Happiness.
 - DJ card with **Refresh Set / Drop Bass / Dedicate Song**. Club Mix, Hip-Hop, Electronic and Pop mixes, each with its own procedural music.
 - Build band with furniture thumbnails, prices and luxury tooltips. Buy, move, rotate and sell.
-- Workers panel with slots that unlock at levels 9/13/17/21. Switch workers between Bar Tender and **Bouncer**, set a bouncer's post, and throw out **troublemakers** automatically or with **Send Bouncer**. Level-up screen. Dressing room with gender, dice, skin and head colours.
+- Workers panel with slots that unlock at levels 9/13/17/21. Switch workers between Bar Tender and **Bouncer**, set a bouncer's post, and watch him walk over and throw out **troublemakers** in his area, or use **Send Bouncer** for anyone outside it. Level-up screen. Dressing room with gender, dice, skin and head colours.
 - Autosave with versioned migrations and corrupt-save recovery. Debug overlay.
 
 - **Celebrities**: book original VIPs who visit, spend big, cheer up the crowd and go up on your celebrity wall.

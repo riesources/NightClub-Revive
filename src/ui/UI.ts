@@ -163,7 +163,16 @@ export class UI {
         this.toast('A guest wanted a drink but no bar is staffed.', 'error');
         break;
       case 'troubleStarted':
-        if (!e.covered) this.toast('A troublemaker is causing a scene! Click them and Send Bouncer.', 'error', 4000);
+        if (!e.covered) {
+          const has = this.game.state.staff.some((m) => m.role === 'bouncer');
+          this.toast(
+            has
+              ? "A troublemaker is outside your bouncer's area! Click them and Send Bouncer, or move his post in Workers."
+              : 'A troublemaker is causing a scene! Switch a worker to Bouncer in Workers to handle them.',
+            'error',
+            5000,
+          );
+        }
         break;
       case 'troubleUnresolved':
         this.toast(`A troublemaker stormed out. Popularity -${tuning.troublePopularityPenalty}`, 'error');
