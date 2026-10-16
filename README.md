@@ -4,19 +4,61 @@ An unofficial fan reconstruction of the 2010 Facebook/browser game **Nightclub C
 
 The layout, characters, furniture and interface are modelled closely on historical screenshots. Everything is **drawn fresh in code**, and the music is **original, generated live**. The game contains **no original code, art or music**. See [`docs/EVIDENCE_REGISTER.md`](docs/EVIDENCE_REGISTER.md) for what is historical and what is proposed.
 
-![club](docs/screenshots/club.png)
+![NightClub Revive club view](docs/screenshots/club.png)
 
-## Run it
+| DJ card | Guest card | Decorate |
+|---|---|---|
+| ![DJ card](docs/screenshots/dj.png) | ![Guest card](docs/screenshots/guest.png) | ![Build mode](docs/screenshots/build.png) |
+| **Dressing room** | **Workers** | |
+| ![Dressing room](docs/screenshots/dress.png) | ![Workers panel](docs/screenshots/workers.png) | |
+
+## How to run it
+
+**You need:** [Node.js](https://nodejs.org/) 18 or newer (20+ recommended) and a modern desktop browser (Chrome, Edge, Firefox or Safari).
+
+1. Download the code:
+   ```bash
+   git clone https://github.com/riesources/NightClub-Revive.git
+   cd NightClub-Revive
+   ```
+2. Install dependencies (first time only):
+   ```bash
+   npm install
+   ```
+3. Start the game:
+   ```bash
+   npm run dev
+   ```
+4. Open **http://localhost:5173** in your browser.
+
+To stop the game, press `Ctrl+C` in the terminal.
+
+### Build a standalone copy
 
 ```bash
-npm install
-npm run dev        # http://localhost:5173
-npm test           # unit tests
-npm run build      # typecheck + production build into dist/
-npm run smoke      # browser smoke test (after build)
+npm run build      # writes the game to dist/
+npm run preview    # serves dist/ at http://localhost:4173
 ```
 
-Saves are stored in your browser's localStorage. Use **Settings** to export, import or reset your save.
+The `dist/` folder is plain static files. You can host it on any static web host, for example GitHub Pages or Netlify.
+
+### How to play
+
+- **Start the music:** click the record button (top left) or the **DJ** icon on the dock, then **Refresh Set** and pick a mix. Click once anywhere first if your browser blocks sound.
+- **Guests** pay a cover charge at the door, dance and buy drinks. Keep the **drink tube** (right) stocked: click **+** to restock.
+- **Drop Bass** sends everyone to the bar. **Dedicate Song** lets you click a guest to cheer them up.
+- **Decorate** (paint bucket): pick an item, then click a tile to buy it. `R` rotates, and `Esc` or right-click cancels. Click placed furniture to move or sell it.
+- Drag to pan, and scroll to zoom. Click any guest to see their card.
+
+Your club saves automatically in your browser. Use **Settings** (gear icon) to export, import or reset your save.
+
+### For developers
+
+```bash
+npm test           # unit tests (Vitest)
+npm run typecheck  # TypeScript check
+npm run smoke      # headless browser smoke test (run npm run build first)
+```
 
 ## What works
 
