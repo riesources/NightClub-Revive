@@ -364,6 +364,16 @@ export class ClubScene extends Phaser.Scene {
       const dancing = guest.state === 'DANCING' && playing;
       const walking = guest.path.length > 0;
       const painter = new PhaserPainter(g);
+      if (guest.guestClass === 'Celebrity') {
+        // gold star halo + sparkle for the VIP
+        g.lineStyle(3, 0xffd23f, 0.9);
+        g.strokeEllipse(p.x, p.y, 38, 15);
+        const tw = (now / 300) % (Math.PI * 2);
+        g.fillStyle(0xffd23f, 1);
+        g.fillPoints(starPoints(p.x, p.y - 82, 9, 4), true);
+        g.fillStyle(0xffffff, 0.8 + 0.2 * Math.sin(tw));
+        g.fillCircle(p.x + 14 * Math.cos(tw), p.y - 60 + 6 * Math.sin(tw), 2);
+      }
       if (guest.state === 'TROUBLEMAKER') {
         g.lineStyle(2.5, 0xe0102a, 0.5 + 0.4 * Math.abs(Math.sin(now / 180)));
         g.strokeEllipse(p.x, p.y, 34, 14);
@@ -591,4 +601,15 @@ export class ClubScene extends Phaser.Scene {
       t.setPosition(p.x, p.y).setText(`${this.hover.col},${this.hover.row}`);
     }
   }
+}
+
+/** Five-pointed star polygon. */
+function starPoints(cx: number, cy: number, outer: number, inner: number): { x: number; y: number }[] {
+  const pts: { x: number; y: number }[] = [];
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 ? inner : outer;
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    pts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
+  }
+  return pts;
 }

@@ -1,5 +1,24 @@
 # Build Log
 
+## 2026-10-16 — Celebrities
+
+**Added**
+- A **Celebrities** panel (dock star), laid out like the original's (Pixnet screenshot): a star row with "Booked Celebrities n / 8", a "Currently in Town" box, and celebrity cards with a level lock, a price and a Book button.
+- 8 **original fictional VIPs**. The original used parodies of real people; these imitate no one. Each has a level, cost, visit length, spending and popularity bonus (all PROPOSED in `src/data/celebrities.ts`).
+- Visit lifecycle on absolute timestamps:
+  - The VIP arrives 5 s after booking, enters through the door with a gold halo and star, and spends money every 10 s.
+  - Nearby guests get happier while the VIP is there.
+  - The VIP leaves on schedule, then the visit is added to the **celebrity wall** with a popularity bonus. This runs exactly once, even if the page is reloaded after the visit ended.
+- One booking at a time.
+- Schema v4 adds `celebrityWall` and `celebrity`, with a v3→v4 migration.
+
+**Commands run and results**
+- `npx vitest run`: 76/76 passed (6 new celebrity tests).
+- `npm run build`: passes.
+- `node scripts/smoke.mjs`: 19/19 passed twice (new check: Celebrities panel books a VIP and charges once).
+- Real-app screenshots reviewed: Celebrities panel, booking, VIP in the club with "★ Celebrity ★" card.
+
+
 ## 2026-10-16 — Bouncers and troublemakers
 
 **Added**

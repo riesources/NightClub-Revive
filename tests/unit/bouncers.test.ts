@@ -135,7 +135,8 @@ describe('troublemakers', () => {
 
 describe('v2 -> v3 migration', () => {
   it('gives every existing worker an empty post', () => {
-    const v2 = { ...createNewClub(0), schemaVersion: 2, staff: [{ id: 's1', role: 'bartender', name: 'Rico', barId: null }] };
+    const { celebrityWall: _w, celebrity: _c, ...rest } = createNewClub(0);
+    const v2 = { ...rest, schemaVersion: 2, staff: [{ id: 's1', role: 'bartender', name: 'Rico', barId: null }] };
     const store = new MemoryStore();
     store.setItem(SAVE_KEY, JSON.stringify(v2));
     const r = new LocalSaveRepository(store).load();

@@ -89,7 +89,9 @@ The game is written in **TypeScript** and runs in any modern web browser.
 - Workers panel with slots that unlock at levels 9/13/17/21. Switch workers between Bar Tender and **Bouncer**, set a bouncer's post, and throw out **troublemakers** automatically or with **Send Bouncer**. Level-up screen. Dressing room with gender, dice, skin and head colours.
 - Autosave with versioned migrations and corrupt-save recovery. Debug overlay.
 
-Not built yet: celebrities, parties, bartender modes, neighbors/friends bar. See [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md).
+- **Celebrities**: book original VIPs who visit, spend big, cheer up the crowd and go up on your celebrity wall.
+
+Not built yet: parties, bartender modes, neighbors/friends bar. See [`docs/BUILD_LOG.md`](docs/BUILD_LOG.md).
 
 ## Layout
 

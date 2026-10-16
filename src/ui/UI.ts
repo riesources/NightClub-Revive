@@ -1,4 +1,6 @@
 import { MIX_LABELS, type MusicPlayer } from '../audio/music';
+import { CELEBRITIES, getCelebrity } from '../data/celebrities';
+import { celebrityPhase } from '../domain/celebrity';
 import { CATEGORY_LABELS, FURNITURE, getFurnitureDef, type FurnitureCategory } from '../data/furnitureCatalog';
 import { LEVEL_TITLES, WORKER_SLOT_LEVELS } from '../data/progression';
 import { tuning } from '../data/tuning';
@@ -62,6 +64,10 @@ function quoteFor(g: Guest, game: Game): string {
   const s = game.state;
   const playing = dj.isPlaying(s, Date.now());
   const queue = g.barId ? (game.sim.queues.get(g.barId)?.length ?? 0) : 0;
+  if (g.guestClass === 'Celebrity') {
+    const lines = ['Love this place! Next round is on me!', 'No photos please... okay, ONE photo.', 'This DJ is better than my last tour.', 'I might just buy this club.'];
+    return lines[Math.floor(Date.now() / 6000) % lines.length];
+  }
   switch (g.state) {
     case 'TROUBLEMAKER':
       return "Hey! Who are YOU looking at?! This place is mine now!";
@@ -156,6 +162,12 @@ export class UI {
       case 'troubleUnresolved':
         this.toast(`A troublemaker stormed out. Popularity -${tuning.troublePopularityPenalty}`, 'error');
         break;
+      case 'celebArrived':
+        this.toast(`★ ${getCelebrity(e.celebId)?.name} has arrived! ★`, 'good', 4000);
+        break;
+      case 'celebLeft':
+        this.toast(`${getCelebrity(e.celebId)?.name} loved your club! Popularity +${e.bonus}`, 'good', 4000);
+        break;
     }
   }
 
@@ -246,7 +258,7 @@ export class UI {
         dockBtn(ICONS.dj, 'DJ', 'dj', () => this.showDjCard()),
         dockBtn(ICONS.workers, 'Workers', 'workers', () => this.openWorkers()),
         dockBtn(ICONS.build, 'Decorate', 'build', () => this.openBuild()),
-        dockBtn(ICONS.celebs, 'Celebrities', 'celebs', () => this.toast('Celebrity bookings arrive in a later update.', 'info'), true),
+        dockBtn(ICONS.celebs, 'Celebrities', 'celebs', () => this.openCelebrities()),
       ),
     );
   }
@@ -386,7 +398,7 @@ export class UI {
               h('div', {}, h('span', {}, 'Happiness:'), h('b', {}, live(String(Math.round(g.happiness))))),
             ),
           ],
-          g.state === 'TROUBLEMAKER' ? 'Troublemaker' : g.guestClass,
+          g.state === 'TROUBLEMAKER' ? 'Troublemaker' : g.guestClass === 'Celebrity' ? '★ Celebrity ★' : g.guestClass,
         );
       }
     } else if (c.kind === 'furniture') {
@@ -618,6 +630,114 @@ export class UI {
 
   private openDressingRoom(): void {
     document.body.append(openDressingRoom(this.game.state.appearance, (a) => this.game.saveAppearance(a), () => {}));
+  }
+
+  /**
+   * Celebrities panel, laid out like the original (Pixnet screenshot): a star
+   * row with "Booked Celebrities n / total", a "Currently in Town" box, and
+   * level-gated celebrity cards. All VIPs are original fictional characters.
+   */
+  private openCelebrities(): void {
+    const body = h('div', {});
+    const render = () => {
+      const s = this.game.state;
+      const now = Date.now();
+      const booked = CELEBRITIES.filter((c) => (s.celebrityWall[c.id] ?? 0) > 0).length;
+      const b = s.celebrity;
+      const phase = celebrityPhase(s, now);
+      const cur = b ? getCelebrity(b.id) : undefined;
+      const town = cur
+        ? h(
+            'div',
+            { class: 'celeb-town-now' },
+            portrait(cur.look, 72, { full: true }),
+            h(
+              'div',
+              {},
+              h('div', { class: 'celeb-name' }, cur.name),
+              h('div', {}, cur.title),
+              h('div', { class: 'celeb-status' }, phase === 'coming' ? `Arriving in ${Math.ceil((b!.arrivesAt - now) / 1000)}s` : phase === 'here' ? `In your club for ${mmss(b!.leavesAt - now)}` : 'Saying goodbye...'),
+            ),
+          )
+        : h('div', { class: 'celeb-empty' }, 'Nobody yet. Book a star below to pack your club!');
+      const cards = CELEBRITIES.map((c) => {
+        const locked = s.level < c.requiredLevel;
+        const visits = s.celebrityWall[c.id] ?? 0;
+        return h(
+          'div',
+          { class: `celeb-card${locked ? ' locked' : ''}`, title: `${c.name} - ${c.title}` },
+          visits ? h('div', { class: 'celeb-visits', title: 'Visits' }, `★×${visits}`) : null,
+          h('div', { class: 'celeb-art' }, portrait(c.look, 76, { full: true }), locked ? icon(ICONS.lock, 'item-lock') : null),
+          h('div', { class: 'celeb-name' }, c.name),
+          h('div', { class: 'celeb-level' }, `Level ${c.requiredLevel}`),
+          locked
+            ? h('div', { class: 'celeb-price' }, `$${fmt(c.cost)}`)
+            : h(
+                'button',
+                {
+                  class: 'btn ok tiny',
+                  disabled: !!b || s.cash < c.cost,
+                  title: b ? 'One celebrity at a time' : s.cash < c.cost ? 'Not enough cash' : `Book for $${fmt(c.cost)}`,
+                  onclick: () => {
+                    if (this.game.bookCelebrity(c.id).ok) render();
+                  },
+                },
+                `Book $${fmt(c.cost)}`,
+              ),
+        );
+      });
+      body.replaceChildren(
+        h(
+          'div',
+          { class: 'celeb-head' },
+          h('div', { class: 'celeb-stars' }, ...CELEBRITIES.map((c) => h('span', { class: (s.celebrityWall[c.id] ?? 0) > 0 ? 'on' : '' }, '★'))),
+          h('div', { class: 'celeb-count' }, `Booked Celebrities: ${booked} / ${CELEBRITIES.length}`),
+        ),
+        h('div', { class: 'celeb-town' }, h('div', { class: 'celeb-town-title' }, 'Currently in Town:'), town),
+        h('div', { class: 'celeb-cards' }, ...cards),
+      );
+    };
+    const el = h(
+      'div',
+      { class: 'modal-backdrop' },
+      h(
+        'div',
+        { class: 'modal panel-tabbed celeb-panel', role: 'dialog', 'aria-label': 'Celebrities' },
+        h('div', { class: 'tab-label' }, icon(ICONS.celebs, 'tab-icon'), 'Celebrities'),
+        h(
+          'button',
+          {
+            class: 'btn ok corner',
+            onclick: () => {
+              clearInterval(timer);
+              el.remove();
+            },
+          },
+          'OK',
+        ),
+        body,
+        h('div', { class: 'placeholder-note' }, 'All VIPs are original fictional characters. Celebrities visit for a few minutes, spend big, and add to your popularity when they leave.'),
+      ),
+    );
+    render();
+    // Only the status line ticks in place; the cards rebuild only when the
+    // visit phase changes, so a click on "Book" is never lost to a rebuild.
+    let lastPhase = celebrityPhase(this.game.state, Date.now());
+    const timer = setInterval(() => {
+      if (!document.body.contains(el)) return clearInterval(timer);
+      const s = this.game.state;
+      const now = Date.now();
+      const phase = celebrityPhase(s, now);
+      if (phase !== lastPhase) {
+        lastPhase = phase;
+        render();
+        return;
+      }
+      const st = el.querySelector('.celeb-status');
+      const b = s.celebrity;
+      if (st && b) st.textContent = phase === 'coming' ? `Arriving in ${Math.ceil((b.arrivesAt - now) / 1000)}s` : phase === 'here' ? `In your club for ${mmss(b.leavesAt - now)}` : 'Saying goodbye...';
+    }, 1000);
+    document.body.append(el);
   }
 
   private openWorkers(): void {

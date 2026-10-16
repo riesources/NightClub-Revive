@@ -1,7 +1,10 @@
 import { appearanceFromSeed } from '../../data/appearanceCatalog';
 import { getFurnitureDef } from '../../data/furnitureCatalog';
 import { tuning } from '../../data/tuning';
+import { CELEB_SPEND_EVERY_MS, getCelebrity } from '../../data/celebrities';
 import { chargeCover, serveDrink } from '../bar';
+import { celebrityPhase, finishCelebrityVisit } from '../celebrity';
+import { creditIncome } from '../progression';
 import { adjustPopularity, clone, computeLuxury, guestCapacity } from '../club';
 import { isPlaying } from '../dj';
 import { adjacentWalkableCells, blockedCells, cellKey, entranceCell, inBounds, instanceCells } from '../grid';
@@ -27,7 +30,9 @@ export type SimEvent =
   | { type: 'guestLeft'; guestId: string; happy: boolean }
   | { type: 'troubleStarted'; guestId: string; covered: boolean }
   | { type: 'bounced'; guestId: string; staffId: string; x: number; y: number }
-  | { type: 'troubleUnresolved'; guestId: string };
+  | { type: 'troubleUnresolved'; guestId: string }
+  | { type: 'celebArrived'; celebId: string; guestId: string }
+  | { type: 'celebLeft'; celebId: string; bonus: number };
 
 interface WorldCache {
   state: ClubState;
@@ -59,6 +64,8 @@ export class GuestSimulation {
   spawnEnabled = true;
   /** Bouncer staff id -> time they are free again after an escort. */
   readonly bouncerBusyUntil = new Map<string, number>();
+  private celebGuestId: string | null = null;
+  private nextCelebSpendAt = 0;
 
   constructor(private readonly rng: Rng) {}
 
@@ -171,6 +178,7 @@ export class GuestSimulation {
       this.think(g, w, state, now, host);
     }
 
+    state = this.updateCelebrity(host, now);
     this.applyTrouble(dt);
     this.runBouncers(host, state, now);
     state = this.serveBars(host, now);
@@ -179,7 +187,9 @@ export class GuestSimulation {
       const draft = clone(state);
       for (const g of departed) {
         const happy = g.happiness >= tuning.happyThreshold && !g.escorted && !g.troubleUnresolved;
-        if (g.troubleUnresolved) {
+        if (g.guestClass === 'Celebrity') {
+          // Popularity for a VIP visit is granted by finishCelebrityVisit.
+        } else if (g.troubleUnresolved) {
           adjustPopularity(draft, -tuning.troublePopularityPenalty);
           host.emit({ type: 'troubleUnresolved', guestId: g.id });
         } else if (g.escorted) {
@@ -196,7 +206,60 @@ export class GuestSimulation {
     }
   }
 
+  /**
+   * Celebrity lifecycle, driven by the booking's absolute timestamps:
+   * arrive at the door, spend every CELEB_SPEND_EVERY_MS, cheer up nearby
+   * guests, then leave and close the visit exactly once.
+   */
+  private updateCelebrity(host: SimHost, now: number): ClubState {
+    let state = host.getState();
+    const phase = celebrityPhase(state, now);
+    const g = this.celebGuestId ? this.guests.find((x) => x.id === this.celebGuestId) : undefined;
+    if (!g) this.celebGuestId = null;
+    if (phase === 'here') {
+      const c = getCelebrity(state.celebrity!.id)!;
+      if (!g) {
+        const v = this.spawn(state, now);
+        Object.assign(v, {
+          name: c.name,
+          appearance: c.look,
+          guestClass: 'Celebrity',
+          troublemaker: false,
+          happiness: 100,
+          thirst: 0,
+          visitEndsAt: state.celebrity!.leavesAt,
+        });
+        this.celebGuestId = v.id;
+        this.nextCelebSpendAt = now + CELEB_SPEND_EVERY_MS;
+        host.emit({ type: 'celebArrived', celebId: c.id, guestId: v.id });
+      } else if (now >= this.nextCelebSpendAt && g.state !== 'LEAVING') {
+        this.nextCelebSpendAt = now + CELEB_SPEND_EVERY_MS;
+        const draft = clone(state);
+        const { leveledUp, reward } = creditIncome(draft, c.spendPerTick);
+        g.spent += c.spendPerTick;
+        host.commit(draft);
+        state = draft;
+        host.emit({ type: 'sale', guestId: g.id, paid: c.spendPerTick, tip: 0, x: g.x, y: g.y });
+        if (leveledUp) host.emit({ type: 'levelUp', level: draft.level, reward });
+      }
+      // Star power: guests near the VIP have a better time (PROPOSED).
+      const vip = g;
+      if (vip) for (const o of this.guests) if (o !== vip && o.state !== 'TROUBLEMAKER' && Math.max(Math.abs(o.x - vip.x), Math.abs(o.y - vip.y)) <= 3) o.happiness = Math.min(100, o.happiness + 0.05);
+    } else if (phase === 'done') {
+      if (g && g.state !== 'LEAVING') this.leave(g, this.world(state), state, now);
+      const c = getCelebrity(state.celebrity!.id)!;
+      const r = finishCelebrityVisit(state, now);
+      if (r.ok) {
+        host.commit(r.state);
+        state = r.state;
+        host.emit({ type: 'celebLeft', celebId: c.id, bonus: c.popularityBonus });
+      }
+    }
+    return state;
+  }
+
   private updateNeeds(g: Guest, dt: number, playing: boolean, genre: string): void {
+    if (g.guestClass === 'Celebrity') return; // VIPs are always having a great time
     if (g.state !== 'DRINKING') g.thirst = Math.min(100, g.thirst + tuning.thirstPerSec * dt);
     let drift = 0;
     if (g.state === 'DANCING') drift = playing ? tuning.danceHappinessPerSec + (g.prefGenre === genre ? 0.6 : 0) : tuning.noMusicHappinessPerSec;
@@ -543,6 +606,7 @@ export class GuestSimulation {
     this.queues.clear();
     this.nextServeAt.clear();
     this.bouncerBusyUntil.clear();
+    this.celebGuestId = null;
     this.cache = null;
     this.lastUpdate = null;
   }
