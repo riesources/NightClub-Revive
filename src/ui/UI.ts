@@ -10,6 +10,7 @@ import { tuning } from '../data/tuning';
 import type { AvatarAppearance } from '../data/appearanceCatalog';
 import { stockCapacity } from '../domain/bar';
 import { computeLuxury } from '../domain/club';
+import { nextFacing } from '../domain/grid';
 import * as dj from '../domain/dj';
 import { features, sellRefund } from '../domain/economy';
 import type { Game, GameEvent } from '../domain/game';
@@ -115,7 +116,7 @@ export class UI {
   private toasts = h('div', { class: 'toasts', 'aria-live': 'polite' });
   private modeBar = h('div', { class: 'mode-bar hidden' });
   private tooltip = h('div', { class: 'tip hidden' });
-  private buildCategory: FurnitureCategory = 'floor';
+  private buildCategory: FurnitureCategory | 'inventory' = 'floor';
   private cardState: Card = null;
   private recentToasts = new Map<string, number>();
   private refs: Record<string, HTMLElement> = {};
@@ -281,11 +282,13 @@ export class UI {
     r.npSub = h('div', { class: 'np-sub' });
     r.npLike = h('button', { class: 'np-like', title: 'Like this mix', onclick: () => this.toggleLike() });
     r.npChange = h('button', { class: 'np-change', title: 'Pick a mix', onclick: () => this.openGenrePicker() });
+    r.npNext = h('button', { class: 'np-next', title: 'Next track in this mix', 'aria-label': 'Next track', onclick: () => this.music.skip() }, 'Next ›');
     r.npEnds = h('div', { class: 'np-ends' });
     this.nowPlaying.append(
       h('div', { class: 'np-top' }, r.npArt, h('div', { class: 'np-text' }, r.npTitle, r.npSub, r.npLike)),
-      h('div', { class: 'np-bottom' }, r.npChange, r.npEnds),
+      h('div', { class: 'np-bottom' }, r.npChange, r.npNext, r.npEnds),
     );
+    this.music.onTrackChange(() => this.renderDjStatus());
 
     // Dock: character-icon buttons on a sky-blue band
     const dockBtn = (svg: string, label: string, id: string, onclick: () => void, soon = false) =>
@@ -400,8 +403,13 @@ export class UI {
     (r.qBass as HTMLButtonElement).disabled = !playing || dj.cooldownLeft(s.dj.lastDropBassAt, tuning.dropBassCooldownMs, now) > 0;
     (r.qMic as HTMLButtonElement).disabled = !playing || dj.cooldownLeft(s.dj.lastDedicateAt, tuning.dedicateCooldownMs, now) > 0;
     r.qRecord.classList.toggle('attention', !playing);
-    r.npTitle.textContent = playing ? MIX_LABELS[s.dj.genre] : 'No set playing';
-    r.npSub.textContent = playing ? 'Original loop' : 'Pick a mix to open the club';
+    // Track name while the music runs (muted: just the mix), like the original's song + artist lines.
+    const track = playing ? this.music.track : null;
+    const title = track ? track.name : playing ? MIX_LABELS[s.dj.genre] : 'No set playing';
+    const sub = track ? `${MIX_LABELS[s.dj.genre]} · ${track.index + 1}/${track.count}` : playing ? 'Original music' : 'Pick a mix to open the club';
+    if (r.npTitle.textContent !== title) r.npTitle.textContent = title;
+    if (r.npSub.textContent !== sub) r.npSub.textContent = sub;
+    r.npNext.classList.toggle('hidden', !track);
     r.npChange.textContent = playing ? 'Change' : 'Start';
     r.npEnds.textContent = playing && s.dj.setEndsAt ? `Ends: ${clockTime(s.dj.setEndsAt)}` : '';
     const liked = playing && this.likedMixes().includes(s.dj.genre);
@@ -480,7 +488,7 @@ export class UI {
       const row = (svg: string, label: string, cd: number, disabled: boolean, onclick: () => void, title: string) =>
         h('button', { class: 'dj-row', disabled, title, onclick }, icon(svg, 'dj-row-icon'), h('span', {}, label, cd > 0 ? h('span', {}, ' (', live(String(Math.ceil(cd / 1000))), 's)') : ''));
       nodes = this.cardShell(
-        portrait(s.appearance, 92, { full: true, headphones: true }),
+        portrait(s.appearance, 128, { headphones: true }),
         'You',
         playing ? h('span', {}, `DJ · ${MIX_LABELS[s.dj.genre]} · `, live(mmss(dj.timeRemaining(s, now)))) : 'DJ',
         [
@@ -495,7 +503,7 @@ export class UI {
         const type = g.state === 'TROUBLEMAKER' ? 'Troublemaker' : g.guestClass;
         const stat = (svg: string, value: HTMLElement | string, title: string) => h('span', { class: 'gstat', title }, icon(svg, 'gstat-icon'), value);
         nodes = this.cardShell(
-          portrait(g.appearance, 92, { full: true }),
+          portrait(g.appearance, 128),
           g.name,
           h('span', { class: `guest-type t-${type.toLowerCase()}` }, type === 'Celebrity' ? '★ Celebrity ★' : type),
           [
@@ -531,19 +539,31 @@ export class UI {
             'div',
             { class: 'card-actions' },
             h('button', { class: 'btn', onclick: () => this.ix.setMode({ kind: 'move', furnitureId: f.id, facing: this.live(f.id)?.facing ?? f.facing }) }, 'Move'),
-            features.rotation && def.w !== def.h
+            features.rotation
               ? h(
                   'button',
                   {
                     class: 'btn',
+                    title: 'Turn a quarter turn (4 directions)',
                     onclick: () => {
                       const cur = this.live(f.id);
-                      if (cur) this.game.move(cur.id, cur.col, cur.row, cur.facing === 0 ? 1 : 0);
+                      if (cur) this.game.move(cur.id, cur.col, cur.row, nextFacing(cur.facing));
                     },
                   },
                   'Rotate',
                 )
               : null,
+            h(
+              'button',
+              {
+                class: 'btn',
+                title: 'Keep it in your inventory and place it again later for free',
+                onclick: () => {
+                  if (this.game.store(f.id).ok) this.closeCard();
+                },
+              },
+              'Store',
+            ),
             h(
               'button',
               {
@@ -604,6 +624,7 @@ export class UI {
   private openBuild(): void {
     this.closeCard();
     this.build.classList.remove('hidden');
+    this.root.classList.add('building');
     this.dock.classList.add('hidden');
     this.nowPlaying.classList.add('hidden');
     this.renderBuild();
@@ -611,6 +632,7 @@ export class UI {
 
   private closeBuild(): void {
     this.build.classList.add('hidden');
+    this.root.classList.remove('building');
     this.dock.classList.remove('hidden');
     this.nowPlaying.classList.remove('hidden');
     this.tooltip.classList.add('hidden');
@@ -621,11 +643,12 @@ export class UI {
     const s = this.game.state;
     const cats = Object.keys(CATEGORY_LABELS) as FurnitureCategory[];
     const items = h('div', { class: 'items' });
-    const inCategory = FURNITURE.filter((x) => x.category === this.buildCategory).sort((a, b) => a.requiredLevel - b.requiredLevel || a.price - b.price);
+    if (this.buildCategory === 'inventory') this.fillInventory(items);
+    const inCategory = this.buildCategory === 'inventory' ? [] : FURNITURE.filter((x) => x.category === this.buildCategory).sort((a, b) => a.requiredLevel - b.requiredLevel || a.price - b.price);
     for (const f of inCategory) {
       const locked = s.level < f.requiredLevel;
       const poor = s.cash < f.price;
-      const selected = this.ix.mode.kind === 'place' && this.ix.mode.catalogId === f.id;
+      const selected = this.ix.mode.kind === 'place' && !this.ix.mode.fromInventory && this.ix.mode.catalogId === f.id;
       const btn = h(
         'button',
         {
@@ -646,6 +669,7 @@ export class UI {
       btn.addEventListener('mouseleave', () => this.tooltip.classList.add('hidden'));
       items.append(btn);
     }
+    const stored = Object.values(s.inventory).reduce((a, b) => a + b, 0);
     const scroll = (dir: number) => this.build.querySelector('.items')?.scrollBy({ left: dir * 300, behavior: 'smooth' });
     const nodes = [
       h(
@@ -653,6 +677,12 @@ export class UI {
         { class: 'build-cats' },
         ...cats.map((c) =>
           h('button', { class: `cat${c === this.buildCategory ? ' active' : ''}`, title: CATEGORY_LABELS[c], 'aria-label': CATEGORY_LABELS[c], onclick: () => ((this.buildCategory = c), this.renderBuild()) }, icon(CATEGORY_ICONS[c], 'cat-icon')),
+        ),
+        h(
+          'button',
+          { class: `cat inv${this.buildCategory === 'inventory' ? ' active' : ''}`, title: 'Inventory', 'aria-label': 'Inventory', onclick: () => ((this.buildCategory = 'inventory'), this.renderBuild()) },
+          icon(ICONS.box, 'cat-icon'),
+          stored ? h('span', { class: 'inv-count' }, String(stored)) : null,
         ),
         h('div', { class: 'build-side' }, h('div', { class: 'score small' }, h('div', { class: 'score-num' }, fmt(computeLuxury(s))), h('div', { class: 'score-label' }, 'LUXURY')), h('button', { class: 'btn ok', onclick: () => this.closeBuild() }, 'Done')),
       ),
@@ -665,6 +695,54 @@ export class UI {
       const it = this.build.querySelector('.items');
       if (it) it.scrollLeft = prevScroll;
     }
+  }
+
+  /** Inventory tab: stored items with counts (free to place), plus Clear Club (S9). */
+  private fillInventory(items: HTMLElement): void {
+    const s = this.game.state;
+    const owned = Object.entries(s.inventory)
+      .map(([id, n]) => ({ def: getFurnitureDef(id)!, n }))
+      .filter((x) => x.def)
+      .sort((a, b) => a.def.category.localeCompare(b.def.category) || a.def.price - b.def.price);
+    if (!owned.length) items.append(h('div', { class: 'inv-empty' }, 'Your inventory is empty. Click placed furniture and choose Store to keep it here for later.'));
+    for (const { def, n } of owned) {
+      const selected = this.ix.mode.kind === 'place' && !!this.ix.mode.fromInventory && this.ix.mode.catalogId === def.id;
+      const btn = h(
+        'button',
+        {
+          class: `item stored${selected ? ' selected' : ''}`,
+          'data-id': def.id,
+          'aria-label': `${def.name}, ${n} stored, free to place`,
+          onclick: () => {
+            this.ix.select(null);
+            this.ix.setMode({ kind: 'place', catalogId: def.id, facing: 0, fromInventory: true });
+          },
+        },
+        h('div', { class: 'item-art' }, furnitureThumb(def, 70), h('span', { class: 'item-count' }, `×${n}`)),
+        h('div', { class: 'item-price free' }, 'Place'),
+      );
+      btn.addEventListener('mouseenter', () => this.showTip(btn, def.name, [`Luxury: ${def.luxury}`, `Size: ${def.w}×${def.h}`, `${n} in inventory · free to place`]));
+      btn.addEventListener('mouseleave', () => this.tooltip.classList.add('hidden'));
+      items.append(btn);
+    }
+    items.append(
+      h(
+        'button',
+        {
+          class: 'item clear-club',
+          disabled: !s.furniture.length,
+          title: 'Move everything in the club to your inventory',
+          onclick: async () => {
+            if (await this.confirm('Move every item in your club to your inventory? You can place them again for free. Guests need a DJ booth, a bar and a dance floor, so place those first.', 'Clear Club')) {
+              this.ix.setMode({ kind: 'normal' });
+              this.game.clearClub();
+            }
+          },
+        },
+        h('div', { class: 'item-art' }, icon(ICONS.box, 'clear-icon')),
+        h('div', { class: 'item-price' }, 'Clear Club'),
+      ),
+    );
   }
 
   private showTip(anchor: HTMLElement, title: string, lines: string[]): void {
@@ -680,7 +758,7 @@ export class UI {
     const m = this.ix.mode;
     const text =
       m.kind === 'place'
-        ? `Placing ${getFurnitureDef(m.catalogId)?.name} — click a tile to buy${features.rotation ? ', R to rotate' : ''}, Esc / right-click to cancel`
+        ? `Placing ${getFurnitureDef(m.catalogId)?.name} — click a tile to ${m.fromInventory ? 'place it (free, from inventory)' : 'buy'}${features.rotation ? ', R to rotate' : ''}, Esc / right-click to cancel`
         : m.kind === 'move'
           ? `Moving — click a tile to drop${features.rotation ? ', R to rotate' : ''}, Esc to cancel (no charge)`
           : m.kind === 'dedicate'

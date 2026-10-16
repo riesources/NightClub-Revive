@@ -1,7 +1,7 @@
 import { DEFAULT_APPEARANCE } from '../data/appearanceCatalog';
 import { getFurnitureDef } from '../data/furnitureCatalog';
 import { tuning } from '../data/tuning';
-import { SCHEMA_VERSION, type ClubState, type FurnitureInstance } from './types';
+import { SCHEMA_VERSION, type ClubState, type Facing, type FurnitureInstance } from './types';
 
 export function clone(state: ClubState): ClubState {
   return structuredClone(state);
@@ -45,10 +45,11 @@ export function createNewClub(now = Date.now()): ClubState {
     partyHistory: {},
     clubName: DEFAULT_CLUB_NAME,
     celebWishes: [],
+    inventory: {},
     nextId: 1,
     savedAt: now,
   };
-  const add = (catalogId: string, col: number, row: number, facing: 0 | 1 = 0): FurnitureInstance => {
+  const add = (catalogId: string, col: number, row: number, facing: Facing = 0): FurnitureInstance => {
     const f = { id: newId(state, 'f'), catalogId, col, row, facing };
     state.furniture.push(f);
     return f;

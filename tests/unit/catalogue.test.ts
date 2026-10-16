@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FURNITURE } from '../../src/data/furnitureCatalog';
 import { createNewClub } from '../../src/domain/club';
 import { buyAndPlace } from '../../src/domain/economy';
-import { blockedCells } from '../../src/domain/grid';
+import { blockedCells, footprintSize } from '../../src/domain/grid';
 import { drawFurniture } from '../../src/render/furnitureArt';
 import type { IsoGfx } from '../../src/render/canvasGraphics';
 import { DEFAULT_ISO } from '../../src/render/isoProjection';
@@ -44,11 +44,14 @@ describe('furniture catalogue', () => {
     }
   });
 
-  it('every item has a drawing that produces shapes with finite coordinates', () => {
+  it('every item draws finite shapes in all four directions', () => {
     for (const f of FURNITURE) {
-      const r = recorder();
-      drawFurniture(r.g, f, 2, 3, f.w, f.h, DEFAULT_ISO, { pulse: 0.7 });
-      expect(r.calls(), f.id).toBeGreaterThan(2);
+      for (const facing of [0, 1, 2, 3] as const) {
+        const { w, h } = footprintSize(f.id, facing);
+        const r = recorder();
+        drawFurniture(r.g, f, 2, 3, w, h, DEFAULT_ISO, { pulse: 0.7, facing });
+        expect(r.calls(), `${f.id} facing ${facing}`).toBeGreaterThan(2);
+      }
     }
   });
 

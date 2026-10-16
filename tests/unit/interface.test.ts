@@ -1,3 +1,4 @@
+import { SCHEMA_VERSION } from '../../src/domain/types';
 import { describe, expect, it } from 'vitest';
 import { CLUB_NAME_MAX, cleanClubName, createNewClub } from '../../src/domain/club';
 import { Game } from '../../src/domain/game';
@@ -53,7 +54,7 @@ describe('v6 -> v7 migration and validation', () => {
     const r = new LocalSaveRepository(store).load();
     expect(r.status).toBe('ok');
     if (r.status === 'ok') {
-      expect(r.state.schemaVersion).toBe(7);
+      expect(r.state.schemaVersion).toBe(SCHEMA_VERSION);
       expect(r.state.clubName).toBe('My Club');
       expect(r.state.celebWishes).toEqual([]);
     }

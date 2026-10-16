@@ -6,7 +6,7 @@ import { isPlaying } from '../domain/dj';
 import { partyActive } from '../domain/party';
 import type { Game, GameEvent } from '../domain/game';
 import { moodOf, type Guest } from '../domain/guests/guest';
-import { blockedCells, checkPlacement, entranceCell, footprintSize, furnitureAt, reservedCells } from '../domain/grid';
+import { backSpot, blockedCells, checkPlacement, entranceCell, footprintSize, furnitureAt, nextFacing, reservedCells } from '../domain/grid';
 import type { ClubState } from '../domain/types';
 import { drawAvatar } from '../render/avatarArt';
 import { drawFurniture, drawTileDiamond } from '../render/furnitureArt';
@@ -130,7 +130,7 @@ export class ClubScene extends Phaser.Scene {
 
   rotateMode(): void {
     const m = this.interaction.mode;
-    if (m.kind === 'place' || m.kind === 'move') this.interaction.setMode({ ...m, facing: m.facing === 0 ? 1 : 0 });
+    if (m.kind === 'place' || m.kind === 'move') this.interaction.setMode({ ...m, facing: nextFacing(m.facing) });
   }
 
   private guestAt(x: number, y: number): Guest | undefined {
@@ -153,10 +153,13 @@ export class ClubScene extends Phaser.Scene {
     const m = this.interaction.mode;
     const cell = screenToGrid(x, y, this.cfg);
     if (m.kind === 'place') {
-      const r = this.game_.buy(m.catalogId, cell.col, cell.row, m.facing);
+      const r = m.fromInventory ? this.game_.placeStored(m.catalogId, cell.col, cell.row, m.facing) : this.game_.buy(m.catalogId, cell.col, cell.row, m.facing);
       if (r.ok) {
         // Keep placing floor tiles (common in builders); other items return to normal.
-        if (getFurnitureDef(m.catalogId)?.kind !== 'dancefloor') this.interaction.setMode({ kind: 'normal' });
+        // Stored items stop when none are left.
+        const tile = getFurnitureDef(m.catalogId)?.kind === 'dancefloor';
+        const more = !m.fromInventory || (this.game_.state.inventory[m.catalogId] ?? 0) > 0;
+        if (!tile || !more) this.interaction.setMode({ kind: 'normal' });
         this.cb.onPlaced();
       }
       return;
@@ -366,7 +369,7 @@ export class ClubScene extends Phaser.Scene {
       g.setDepth(flat ? DEPTH_FLAT + depthFor(f.col, f.row, w, h) : (depthFor(f.col, f.row, w, h) - 1) * 100);
       // Each dance tile pulses slightly out of phase for a lit-floor look.
       const p = flat ? (Math.sin(Date.now() / 300 + (f.col * 1.7 + f.row * 2.3)) + 1) / 2 * pulse + 0.1 : pulse;
-      drawFurniture(g, def, f.col, f.row, w, h, this.cfg, { pulse: p, alpha: f.id === moving ? 0.35 : 1 });
+      drawFurniture(g, def, f.col, f.row, w, h, this.cfg, { pulse: p, alpha: f.id === moving ? 0.35 : 1, facing: f.facing });
       if (f.id === selected) drawTileDiamond(g, f.col, f.row, w, h, this.cfg, null, 0, 0xffffff, 0.9);
     }
     for (const [id, g] of this.furnGfx) {
@@ -496,8 +499,10 @@ export class ClubScene extends Phaser.Scene {
         if (bar) {
           const { w, h } = footprintSize(bar.catalogId, bar.facing);
           // stand along the back edge of the bar
-          at = bar.facing === 0 ? { x: bar.col + w / 2, y: bar.row + 0.05, depth: 0 } : { x: bar.col + 0.05, y: bar.row + h / 2, depth: 0 };
-          at.depth = (depthFor(bar.col, bar.row, w, h) - 1) * 100 - 1;
+          // stand along the bar's back edge; when that edge faces the viewer, draw in front of the bar
+          const spot = backSpot(bar.col, bar.row, w, h, bar.facing);
+          const front = bar.facing === 2 || bar.facing === 3;
+          at = { ...spot, depth: front ? depthFor(bar.col, bar.row, w, h) * 100 + 10 : (depthFor(bar.col, bar.row, w, h) - 1) * 100 - 1 };
         }
       }
       if (!at) continue;
@@ -541,9 +546,11 @@ export class ClubScene extends Phaser.Scene {
     if (!booth) return;
     const { w, h } = footprintSize(booth.catalogId, booth.facing);
     const lift = getFurnitureDef(booth.catalogId)?.art.style === 'podium' ? 12 : 0;
-    const base = booth.facing === 0 ? gridToScreen(booth.col + w / 2, booth.row + 0.05, this.cfg) : gridToScreen(booth.col + 0.05, booth.row + h / 2, this.cfg);
+    const spot = backSpot(booth.col, booth.row, w, h, booth.facing);
+    const base = gridToScreen(spot.x, spot.y, this.cfg);
     const back = { x: base.x, y: base.y - lift };
-    g.setDepth((depthFor(booth.col, booth.row, w, h) - 1) * 100 - 1);
+    const front = booth.facing === 2 || booth.facing === 3;
+    g.setDepth(front ? depthFor(booth.col, booth.row, w, h) * 100 + 10 : (depthFor(booth.col, booth.row, w, h) - 1) * 100 - 1);
     if (playing) {
       // blue spotlight ring around the DJ, as in the reference screenshots
       g.lineStyle(3, 0x2a7bff, 0.9);
@@ -567,10 +574,11 @@ export class ClubScene extends Phaser.Scene {
       const def = catalogId ? getFurnitureDef(catalogId) : undefined;
       if (def && catalogId) {
         const ignore = m.kind === 'move' ? m.furnitureId : undefined;
-        const valid = checkPlacement(state, catalogId, this.hover.col, this.hover.row, m.facing, ignore).valid && (m.kind === 'move' || state.cash >= def.price);
+        const affordable = m.kind === 'move' || (m.fromInventory ? (state.inventory[catalogId] ?? 0) > 0 : state.cash >= def.price);
+        const valid = checkPlacement(state, catalogId, this.hover.col, this.hover.row, m.facing, ignore).valid && affordable;
         const { w, h } = footprintSize(catalogId, m.facing);
         drawTileDiamond(g, this.hover.col, this.hover.row, w, h, this.cfg, valid ? 0x3ddc84 : 0xff3d3d, 0.35, valid ? 0x3ddc84 : 0xff3d3d);
-        drawFurniture(g, def, this.hover.col, this.hover.row, w, h, this.cfg, { alpha: 0.6, tint: valid ? undefined : 0xff5555, pulse: 0.6 });
+        drawFurniture(g, def, this.hover.col, this.hover.row, w, h, this.cfg, { alpha: 0.6, tint: valid ? undefined : 0xff5555, pulse: 0.6, facing: m.facing });
       }
     } else if (m.kind === 'post') {
       const r = tuning.bouncerRadius;

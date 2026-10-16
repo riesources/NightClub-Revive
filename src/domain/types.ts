@@ -1,15 +1,20 @@
 import type { AvatarAppearance } from '../data/appearanceCatalog';
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
-/** CONFIRMED genres: GameYum guide lists club mix, hip hop, electronica, pop. */
-export const GENRES = ['club_mix', 'hiphop', 'electronic', 'pop'] as const;
+/**
+ * The first four are CONFIRMED (GameYum guide: club mix, hip hop, electronica,
+ * pop). House and Latin are PROPOSED extra mixes added for variety.
+ */
+export const GENRES = ['club_mix', 'hiphop', 'electronic', 'pop', 'house', 'latin'] as const;
 export type Genre = (typeof GENRES)[number];
 export const GENRE_LABELS: Record<Genre, string> = {
   club_mix: 'Club Mix',
   hiphop: 'Hip-Hop',
   electronic: 'Electronic',
   pop: 'Pop',
+  house: 'House',
+  latin: 'Latin',
 };
 
 export interface GridPoint {
@@ -17,8 +22,8 @@ export interface GridPoint {
   row: number;
 }
 
-/** 0 = default orientation, 1 = mirrored (footprint w/h swapped). PROPOSED, feature-flagged. */
-export type Facing = 0 | 1;
+/** 0 = default, then quarter turns. Odd facings swap the footprint (4 directions). */
+export type Facing = 0 | 1 | 2 | 3;
 
 export interface FurnitureInstance {
   id: string;
@@ -78,6 +83,8 @@ export interface ClubState {
   clubName: string;
   /** Celebrities marked with "Wish" on their card. */
   celebWishes: string[];
+  /** Stored furniture: catalogue id -> count (the original's Inventory tab, S9). */
+  inventory: Record<string, number>;
   /** Monotonic counter for stable ids. */
   nextId: number;
   savedAt: number;

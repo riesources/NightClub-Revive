@@ -142,41 +142,49 @@ export function drawAvatar(p: Painter, a: AvatarAppearance, x: number, y: number
   p.fill(skin);
   p.ellipse(hx, hy + 1 * s, headW - 2 * s, headH - 3 * s);
 
-  // Eyes: large, glossy, heavy upper lid
+  // Eyes: large and glossy, but half-closed under a heavy skin-coloured upper
+  // lid with a thick lash line - the cool, sleepy look of the reference art.
   const eyeY = hy + 3.5 * s;
   for (const ex of [hx - 6.8 * s, hx + 6.8 * s]) {
+    const outer = ex < hx ? -1 : 1;
     p.fill(0xffffff);
     p.stroke(1.1 * s, OUTLINE);
-    p.ellipse(ex, eyeY, 9.5 * s, 11 * s);
+    p.ellipse(ex, eyeY + 0.5 * s, 9.5 * s, 10 * s);
     p.noStroke();
     p.fill(0x3a2a20);
-    p.ellipse(ex + 0.6 * s, eyeY + 1 * s, 6 * s, 8 * s);
+    p.ellipse(ex + 0.4 * s, eyeY + 1.6 * s, 6.4 * s, 7.6 * s);
     p.fill(0x0b0b10);
-    p.ellipse(ex + 0.6 * s, eyeY + 1.4 * s, 3.4 * s, 4.6 * s);
+    p.ellipse(ex + 0.4 * s, eyeY + 2 * s, 3.6 * s, 4.4 * s);
+    // heavy lid covers the top of the eye
+    p.fill(skin);
+    p.poly([
+      { x: ex - 5.8 * s, y: eyeY - 7 * s },
+      { x: ex + 5.8 * s, y: eyeY - 7 * s },
+      { x: ex + 5.8 * s, y: eyeY + (outer > 0 ? 0.2 : -1.4) * s },
+      { x: ex - 5.8 * s, y: eyeY + (outer > 0 ? -1.4 : 0.2) * s },
+    ]);
     p.fill(0xffffff);
-    p.circle(ex - 0.8 * s, eyeY - 1.2 * s, 1.4 * s);
-    // upper lid
+    p.circle(ex - 1.2 * s, eyeY + 1 * s, 1.3 * s);
+    // lash line along the lid edge, thicker towards the outer corner
     p.fill(OUTLINE);
     p.poly([
-      { x: ex - 5.4 * s, y: eyeY - 1.5 * s },
-      { x: ex - 3 * s, y: eyeY - 5.4 * s },
-      { x: ex + 3 * s, y: eyeY - 5.6 * s },
-      { x: ex + 5.4 * s, y: eyeY - 2.4 * s },
-      { x: ex + 4.6 * s, y: eyeY - 3.6 * s },
-      { x: ex - 4.6 * s, y: eyeY - 3.2 * s },
+      { x: ex - 5.4 * s * outer, y: eyeY + (outer > 0 ? -1.2 : 0) * s },
+      { x: ex + 5.6 * s * outer, y: eyeY + (outer > 0 ? 0 : -1.2) * s },
+      { x: ex + 6 * s * outer, y: eyeY + (outer > 0 ? -2.6 : -3.8) * s },
+      { x: ex - 5 * s * outer, y: eyeY + (outer > 0 ? -2.6 : -2) * s },
     ]);
     if (female) {
       p.poly([
-        { x: ex + (ex < hx ? -5.2 : 5.2) * s, y: eyeY - 2 * s },
-        { x: ex + (ex < hx ? -7.4 : 7.4) * s, y: eyeY - 4.2 * s },
-        { x: ex + (ex < hx ? -4.4 : 4.4) * s, y: eyeY - 3.6 * s },
+        { x: ex + 5.4 * s * outer, y: eyeY - 1.6 * s },
+        { x: ex + 8 * s * outer, y: eyeY - 4.2 * s },
+        { x: ex + 4.8 * s * outer, y: eyeY - 3.2 * s },
       ]);
     }
   }
   // brows
   p.fill(shade(hair, 0.7));
-  p.rect(hx - 10 * s, eyeY - 9 * s, 6 * s, 1.6 * s);
-  p.rect(hx + 4 * s, eyeY - 9 * s, 6 * s, 1.6 * s);
+  p.poly([{ x: hx - 11 * s, y: eyeY - 7.4 * s }, { x: hx - 3.5 * s, y: eyeY - 8.8 * s }, { x: hx - 3.5 * s, y: eyeY - 7.2 * s }, { x: hx - 11 * s, y: eyeY - 5.9 * s }]);
+  p.poly([{ x: hx + 3.5 * s, y: eyeY - 8.8 * s }, { x: hx + 11 * s, y: eyeY - 7.4 * s }, { x: hx + 11 * s, y: eyeY - 5.9 * s }, { x: hx + 3.5 * s, y: eyeY - 7.2 * s }]);
   // nose + mouth
   p.fill(skinShade);
   p.ellipse(hx + 0.5 * s, eyeY + 6.5 * s, 2.6 * s, 1.8 * s);

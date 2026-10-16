@@ -126,6 +126,28 @@ try {
   });
   check('valid placement charges exactly once', placed.ok && placed.delta === 250, JSON.stringify(placed));
 
+  // Inventory: Store from the furniture card (no refund), then place it again from the Inventory tab for free
+  await page.evaluate(() => {
+    const g = window.__ncr.game;
+    const palm = g.state.furniture.find((f) => f.catalogId === 'plant_palm');
+    window.__ncr.ix.select({ kind: 'furniture', id: palm.id });
+  });
+  await page.waitForTimeout(300);
+  await page.click('.card .btn >> text=Store');
+  await click('.cat.inv');
+  await click('.item.stored[data-id="plant_palm"]');
+  const inv = await page.evaluate(() => {
+    const { game, ix } = window.__ncr;
+    const stored = game.state.inventory.plant_palm ?? 0;
+    const mode = ix.mode;
+    const c0 = game.state.cash;
+    const e0 = game.state.totalEarned;
+    const r = game.placeStored('plant_palm', 6, 7);
+    return { stored, fromInventory: mode.kind === 'place' && mode.fromInventory === true, placed: r.ok, cost: c0 - game.state.cash + (game.state.totalEarned - e0), left: game.state.inventory.plant_palm ?? 0 };
+  });
+  check('Store moves an item to the inventory; the Inventory tab places it again for free', inv.stored === 1 && inv.fromInventory && inv.placed && inv.cost === 0 && inv.left === 0, JSON.stringify(inv));
+  await page.keyboard.press('Escape');
+
   // Dressing room: cancel does not persist, save does
   await click('.btn.ok >> text=Done');
   await click('.dock-btn[data-id="dress"]');
@@ -216,6 +238,35 @@ try {
     ends: document.querySelector('.np-ends')?.textContent ?? '',
   }));
   check('club name renames, Wish saves, now playing shows "Ends: <time>"', iface.name === 'Smoke Club' && iface.label === 'Smoke Club' && iface.wishes.length === 1 && /^Ends: \d{1,2}:\d\d(am|pm)$/.test(iface.ends), JSON.stringify(iface));
+
+  // Four-way rotation: a sofa turns through all four facings in place
+  const rot = await page.evaluate(() => {
+    const g = window.__ncr.game;
+    g.replaceState({ ...g.state, level: Math.max(1, g.state.level), cash: g.state.cash + 2000 });
+    if (!g.buy('sofa_red', 2, 7).ok) return { ok: false };
+    const id = g.state.furniture.at(-1).id;
+    const seen = [];
+    for (let i = 0; i < 4; i++) {
+      const cur = g.state.furniture.find((f) => f.id === id);
+      g.move(id, cur.col, cur.row, (cur.facing + 1) % 4);
+      seen.push(g.state.furniture.find((f) => f.id === id).facing);
+    }
+    return { ok: true, seen };
+  });
+  check('furniture rotates through all four directions', rot.ok && rot.seen.join(',') === '1,2,3,0', JSON.stringify(rot));
+
+  // More music: six mixes, each with a named track playlist and a Next button
+  const mus = await page.evaluate(async () => {
+    const { music } = window.__ncr;
+    const mixes = document.querySelectorAll('.mix').length;
+    music.unlock();
+    music.play('house');
+    const a = music.track?.name;
+    music.skip();
+    const b = music.track?.name;
+    return { a, b, count: music.track?.count };
+  });
+  check('music: tracks play as a set and Next moves to the next track', !!mus.a && !!mus.b && mus.a !== mus.b && mus.count >= 3, JSON.stringify(mus));
 
   // Progress screen: opens from the level badge, highlights the current level, shows what's next
   await click('.level-badge');
