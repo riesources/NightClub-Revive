@@ -255,6 +255,24 @@ try {
   });
   check('furniture rotates through all four directions', rot.ok && rot.seen.join(',') === '1,2,3,0', JSON.stringify(rot));
 
+  // Seating: a guest who reaches a sofa sits on it (on the seat, sitting pose)
+  const sit = await page.evaluate(async () => {
+    const { game } = window.__ncr;
+    game.replaceState({ ...game.state, level: Math.max(3, game.state.level), cash: game.state.cash + 6000 });
+    if (!game.buy('sofa_round_red', 3, 8).ok) return { ok: false };
+    const seat = game.state.furniture.at(-1);
+    const g = game.sim.spawn(game.state, Date.now());
+    g.troublemaker = false;
+    g.seatId = seat.id;
+    g.state = 'SEEKING_SEAT';
+    g.path = [];
+    g.x = seat.col - 0.5;
+    g.y = seat.row + 0.5;
+    await new Promise((r) => setTimeout(r, 600));
+    return { ok: true, sitting: g.sitting, onSeat: Math.floor(g.x) >= seat.col && Math.floor(g.y) >= seat.row };
+  });
+  check('guests sit on sofas', sit.ok && sit.sitting && sit.onSeat, JSON.stringify(sit));
+
   // More music: six mixes, each with a named track playlist and a Next button
   const mus = await page.evaluate(async () => {
     const { music } = window.__ncr;

@@ -64,6 +64,11 @@ export interface Guest {
   troubleUnresolved: boolean;
   /** Staff id of the bouncer walking over to escort this troublemaker. */
   caughtBy: string | null;
+  /** Actually sitting on a seat (seatId, slot index), placed on the seat itself. */
+  sitting: boolean;
+  seatSlot: number;
+  /** The free tile beside the seat to step back onto when getting up. */
+  standAt: GridPoint | null;
   seed: number;
   appearance: AvatarAppearance;
   prefGenre: Genre;

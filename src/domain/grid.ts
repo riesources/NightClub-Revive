@@ -3,6 +3,58 @@ import type { ClubState, Facing, FurnitureInstance, GridPoint } from './types';
 
 export const cellKey = (col: number, row: number): string => `${col},${row}`;
 
+/**
+ * Item-local frame: u runs along the item's length, v from its back (0) to its
+ * front (depth). Maps local boxes and points onto the rotated grid footprint.
+ * Shared by the art (backrests, bottles...) and the simulation (seat slots).
+ */
+export function localFrame(col: number, row: number, w: number, h: number, facing: number) {
+  const odd = facing % 2 === 1;
+  const L = odd ? h : w;
+  const D = odd ? w : h;
+  const pt = (u: number, v: number): { c: number; r: number } => {
+    switch (facing) {
+      case 1:
+        return { c: col + v, r: row + u };
+      case 2:
+        return { c: col + L - u, r: row + D - v };
+      case 3:
+        return { c: col + w - v, r: row + h - u };
+      default:
+        return { c: col + u, r: row + v };
+    }
+  };
+  const box = (u0: number, v0: number, du: number, dv: number): [number, number, number, number] => {
+    const a = pt(u0, v0);
+    const b = pt(u0 + du, v0 + dv);
+    return [Math.min(a.c, b.c), Math.min(a.r, b.r), Math.abs(b.c - a.c), Math.abs(b.r - a.r)];
+  };
+  return { L, D, pt, box };
+}
+
+/**
+ * Where guests sit on a seat, in tile units (x = col, y = row). One slot per
+ * person: a sofa seats one per tile of length, a booth two rows, chairs and
+ * stools one. Slots sit a little forward of the backrest.
+ */
+export function seatSlots(f: FurnitureInstance): { x: number; y: number }[] {
+  const def = getFurnitureDef(f.catalogId);
+  if (!def || def.kind !== 'seat') return [];
+  const { w, h } = footprintSize(f.catalogId, f.facing);
+  const lf = localFrame(f.col, f.row, w, h, f.facing);
+  const local: [number, number][] = [];
+  const style = def.art.style;
+  if (style === 'sofa') for (let k = 0; k < lf.L; k++) local.push([k + 0.5, 0.58]);
+  else if (style === 'booth' || style === 'roundsofa' || style === 'curvedbooth') {
+    for (let k = 0; k < lf.L; k++) local.push([k + 0.5, 0.62]);
+    if (lf.D >= 2) for (let k = 0; k < lf.L; k++) local.push([k + 0.5, lf.D - 0.45]);
+  } else local.push([lf.L / 2, Math.min(0.6, lf.D / 2 + 0.1)]);
+  return local.map(([u, v]) => {
+    const p = lf.pt(u, v);
+    return { x: p.c, y: p.r };
+  });
+}
+
 /** Quarter turn clockwise: 0 -> 1 -> 2 -> 3 -> 0. */
 export const nextFacing = (f: Facing): Facing => ((f + 1) % 4) as Facing;
 

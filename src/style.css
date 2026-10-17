@@ -2426,3 +2426,7 @@ button {
 .np-next.hidden {
   display: none;
 }
+
+.np-next {
+  white-space: nowrap;
+}

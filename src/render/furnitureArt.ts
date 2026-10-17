@@ -2,6 +2,7 @@ import type { IsoGfx } from './canvasGraphics';
 import type { FurnitureDef } from '../data/furnitureCatalog';
 import { gridToScreen, type IsoConfig } from './isoProjection';
 import { shade } from './painter';
+import { localFrame } from '../domain/grid';
 
 /**
  * REPLACEMENT ART: furniture drawn procedurally in an isometric style modelled
@@ -44,34 +45,6 @@ export function drawPrism(g: G, col: number, row: number, w: number, h: number, 
     g.strokePoints([up(d, height), d, c, b, up(b, height)], false);
     g.lineBetween(c.x, c.y, c.x, c.y - height);
   }
-}
-
-/**
- * Item-local frame: u runs along the item's length, v from its back (0) to its
- * front (depth). Maps local boxes and points onto the rotated grid footprint.
- */
-function localFrame(col: number, row: number, w: number, h: number, facing: number) {
-  const odd = facing % 2 === 1;
-  const L = odd ? h : w;
-  const D = odd ? w : h;
-  const pt = (u: number, v: number): { c: number; r: number } => {
-    switch (facing) {
-      case 1:
-        return { c: col + v, r: row + u };
-      case 2:
-        return { c: col + L - u, r: row + D - v };
-      case 3:
-        return { c: col + w - v, r: row + h - u };
-      default:
-        return { c: col + u, r: row + v };
-    }
-  };
-  const box = (u0: number, v0: number, du: number, dv: number): [number, number, number, number] => {
-    const a = pt(u0, v0);
-    const b = pt(u0 + du, v0 + dv);
-    return [Math.min(a.c, b.c), Math.min(a.r, b.r), Math.abs(b.c - a.c), Math.abs(b.r - a.r)];
-  };
-  return { L, D, pt, box };
 }
 
 /** Front faces of a box as quads, for painting details onto. */
@@ -332,6 +305,203 @@ export function drawFurniture(g: G, def: FurnitureDef, col: number, row: number,
       g.fillCircle(centre.x, centre.y - H - 4, 10 + pulse * 6);
       g.fillStyle(0xffffff, 0.6 * A);
       g.fillCircle(centre.x, centre.y - H - 4, 3);
+      break;
+    }
+    case 'checker': {
+      // four-square checkerboard light tile
+      drawPrism(g, col, row, w, h, 0, H, shade(top, 0.8), side, cfg, A);
+      for (let i = 0; i < 2; i++)
+        for (let j = 0; j < 2; j++) {
+          const q = corners(col + i * w * 0.5, row + j * h * 0.5, w * 0.5, h * 0.5, cfg).map((pp) => up(pp, H));
+          g.fillStyle((i + j) % 2 ? (def.art.glow ?? 0x1b1b22) : top, ((i + j) % 2 ? 0.95 : 0.7 + 0.3 * pulse) * A);
+          g.fillPoints(q, true);
+        }
+      g.lineStyle(1, shade(side, 0.8), 0.8 * A);
+      g.strokePoints(corners(col, row, w, h, cfg).map((pp) => up(pp, H)), true);
+      break;
+    }
+    case 'roundsofa':
+    case 'curvedbooth': {
+      // round couch around a small table (S8 red ring sofa, S9 white lounges);
+      // the open side faces the item's front
+      const c = gridToScreen(col + w / 2, row + h / 2, cfg);
+      const rx = (cfg.tileW / 2) * Math.min(w, h) * 0.95;
+      const ry = rx / 2;
+      const seatH = H * 0.5;
+      g.fillStyle(0x000000, 0.25 * A);
+      g.fillEllipse(c.x, c.y + 2, rx * 2.1, ry * 2.1);
+      // back: the arc away from the open (front) side
+      const front = [Math.PI * 0.75, Math.PI * 0.25, -Math.PI * 0.25, -Math.PI * 0.75][facing] ?? Math.PI * 0.75;
+      const span = def.art.style === 'curvedbooth' ? Math.PI * 1.45 : Math.PI * 1.2;
+      const arcPts = (r: number, z: number): Pt[] => {
+        const pts: Pt[] = [];
+        for (let k = 0; k <= 24; k++) {
+          const a = front + Math.PI - span / 2 + (span * k) / 24;
+          pts.push({ x: c.x + Math.cos(a) * rx * r, y: c.y + Math.sin(a) * ry * r - z });
+        }
+        return pts;
+      };
+      // seat ring
+      g.fillStyle(side, A);
+      g.fillEllipse(c.x, c.y - 2, rx * 2, ry * 2);
+      g.fillStyle(top, A);
+      g.fillEllipse(c.x, c.y - seatH, rx * 2, ry * 2);
+      g.fillStyle(shade(top, 0.82), A);
+      g.fillEllipse(c.x, c.y - seatH, rx * 1.2, ry * 1.2);
+      // backrest band
+      const outer = arcPts(1, seatH + H * 0.75);
+      const inner = arcPts(0.78, seatH + H * 0.75).reverse();
+      const base = arcPts(1, seatH);
+      g.fillStyle(side, A);
+      g.fillPoints([...base, ...arcPts(1, seatH + H * 0.75).reverse()], true);
+      g.fillStyle(shade(top, 1.1), A);
+      g.fillPoints([...outer, ...inner], true);
+      g.lineStyle(1.2, OUT, 0.6 * A);
+      g.strokePoints(outer, false);
+      // little round table in the middle
+      g.fillStyle(0xa0a8b6, A);
+      g.fillRect(c.x - 1.5, c.y - seatH - 10, 3, 10);
+      g.fillStyle(def.art.style === 'curvedbooth' ? 0x1b1d22 : 0xf2f2f2, A);
+      g.fillEllipse(c.x, c.y - seatH - 11, 20, 9);
+      if (def.art.glow) {
+        g.lineStyle(1.5, def.art.glow, (0.4 + 0.5 * pulse) * A);
+        g.strokeEllipse(c.x, c.y - 2, rx * 2, ry * 2);
+      }
+      break;
+    }
+    case 'lightrig': {
+      // two chrome poles, a crossbar and coloured spot cans throwing beams down
+      const a0 = lf.pt(0.15, 0.5);
+      const a1 = lf.pt(lf.L - 0.15, 0.5);
+      const p0 = gridToScreen(a0.c, a0.r, cfg);
+      const p1 = gridToScreen(a1.c, a1.r, cfg);
+      const beams = [0xff3df2, 0x00e5ff, 0xffd23f];
+      beams.forEach((col2, i) => {
+        const t2 = (i + 1) / (beams.length + 1);
+        const hx = p0.x + (p1.x - p0.x) * t2;
+        const hy = p0.y + (p1.y - p0.y) * t2 - H + 6;
+        const swing = Math.sin(Date.now() / 700 + i * 2) * 10;
+        g.fillStyle(col2, (0.12 + 0.12 * pulse) * A);
+        g.fillTriangle(hx, hy, hx - 14 + swing, hy + H - 2, hx + 14 + swing, hy + H - 2);
+      });
+      g.lineStyle(3, top, A);
+      g.lineBetween(p0.x, p0.y, p0.x, p0.y - H);
+      g.lineBetween(p1.x, p1.y, p1.x, p1.y - H);
+      g.lineStyle(4, side, A);
+      g.lineBetween(p0.x, p0.y - H, p1.x, p1.y - H);
+      beams.forEach((col2, i) => {
+        const t2 = (i + 1) / (beams.length + 1);
+        const hx = p0.x + (p1.x - p0.x) * t2;
+        const hy = p0.y + (p1.y - p0.y) * t2 - H + 6;
+        g.fillStyle(0x1b1d22, A);
+        g.fillRect(hx - 4, hy - 6, 8, 7);
+        g.fillStyle(col2, (0.7 + 0.3 * pulse) * A);
+        g.fillCircle(hx, hy + 1, 2.5);
+      });
+      for (const p of [p0, p1]) {
+        g.fillStyle(side, A);
+        g.fillEllipse(p.x, p.y, 12, 5);
+      }
+      break;
+    }
+    case 'glasspanel': {
+      // frosted glass partition with an etched swirl (S9 glass walls)
+      const [bc, br, bw, bh] = lf.box(0.04, 0.42, lf.L - 0.08, 0.16);
+      drawPrism(g, bc, br, bw, bh, 0, 4, side, shade(side, 0.8), cfg, A);
+      drawPrism(g, bc, br, bw, bh, 4, H - 4, shade(top, 1.2), top, cfg, 0.45 * A, false);
+      const f = faces(bc, br, bw, bh, 4, H - 4, cfg);
+      const face = facing % 2 === 0 ? f.left : f.right;
+      g.lineStyle(2, 0xffffff, 0.55 * A);
+      const swirl: Pt[] = [];
+      for (let k = 0; k <= 20; k++) {
+        const t2 = k / 20;
+        swirl.push(face(0.2 + 0.6 * t2, 0.25 + 0.5 * (0.5 + 0.4 * Math.sin(t2 * Math.PI * 2))));
+      }
+      g.strokePoints(swirl, false);
+      g.fillStyle(def.art.glow ?? 0xff3df2, (0.25 + 0.35 * pulse) * A);
+      const gl = face(0.5, 0.9);
+      g.fillCircle(gl.x, gl.y, 3);
+      g.lineStyle(1.4, side, A);
+      g.strokePoints([face(0, 0), face(1, 0), face(1, 1), face(0, 1)], true);
+      break;
+    }
+    case 'tubelamp': {
+      g.fillStyle(0x000000, 0.25 * A);
+      g.fillEllipse(centre.x, centre.y, 22, 9);
+      g.fillStyle(side, A);
+      g.fillEllipse(centre.x, centre.y - 2, 16, 7);
+      g.fillStyle(top, A);
+      g.fillEllipse(centre.x, centre.y - 4, 14, 6);
+      const glow = def.art.glow ?? 0xb04cff;
+      g.fillStyle(glow, (0.15 + 0.2 * pulse) * A);
+      g.fillCircle(centre.x, centre.y - H * 0.55, 14 + 4 * pulse);
+      g.fillStyle(glow, (0.75 + 0.25 * pulse) * A);
+      g.fillRect(centre.x - 3, centre.y - H, 6, H - 4);
+      g.fillStyle(0xffffff, 0.6 * A);
+      g.fillRect(centre.x - 1, centre.y - H + 2, 1.5, H - 8);
+      g.fillStyle(top, A);
+      g.fillEllipse(centre.x, centre.y - H, 9, 4);
+      break;
+    }
+    case 'table': {
+      // round chrome cocktail table
+      g.fillStyle(0x000000, 0.25 * A);
+      g.fillEllipse(centre.x, centre.y, 24, 10);
+      g.fillStyle(side, A);
+      g.fillEllipse(centre.x, centre.y - 1, 14, 6);
+      g.fillRect(centre.x - 1.5, centre.y - H, 3, H);
+      g.fillStyle(shade(top, 0.8), A);
+      g.fillEllipse(centre.x, centre.y - H + 1, 28, 12);
+      g.fillStyle(top, A);
+      g.fillEllipse(centre.x, centre.y - H, 28, 12);
+      g.lineStyle(1, OUT, 0.5 * A);
+      g.strokeEllipse(centre.x, centre.y - H, 28, 12);
+      g.fillStyle(0xffffff, 0.6 * A);
+      g.fillEllipse(centre.x - 6, centre.y - H - 1, 8, 3);
+      // a cocktail on top
+      g.fillStyle(0xff3df2, 0.9 * A);
+      g.fillTriangle(centre.x + 3, centre.y - H - 9, centre.x + 9, centre.y - H - 9, centre.x + 6, centre.y - H - 4);
+      g.lineStyle(1, 0xffffff, A);
+      g.lineBetween(centre.x + 6, centre.y - H - 4, centre.x + 6, centre.y - H - 1);
+      break;
+    }
+    case 'djstatue':
+    case 'showgirl': {
+      // celebrity statues on a marble plinth (S9 "NEW" statues)
+      drawPrism(g, col + 0.2, row + 0.2, 0.6, 0.6, 0, 14, 0x2a2c33, 0x15161b, cfg, A);
+      const b = up(centre, 14);
+      const metal = top;
+      const dark = shade(metal, 0.6);
+      if (def.art.style === 'showgirl') {
+        // big feather fan behind
+        for (let k = 0; k < 9; k++) {
+          const a = Math.PI * (1.08 + (0.84 * k) / 8);
+          const len = 30 + (k % 2) * 4;
+          g.fillStyle(k % 2 ? def.art.glow ?? 0xe0202e : shade(def.art.glow ?? 0xe0202e, 1.3), A);
+          g.fillEllipse(b.x + Math.cos(a) * len * 0.6, b.y - 28 + Math.sin(a) * len * 0.6, 10, 22);
+        }
+      }
+      g.fillStyle(dark, A);
+      g.fillRect(b.x - 5, b.y - 16, 4, 16);
+      g.fillRect(b.x + 1, b.y - 16, 4, 16);
+      g.fillStyle(metal, A);
+      g.fillPoints([{ x: b.x - 7, y: b.y - 15 }, { x: b.x + 7, y: b.y - 15 }, { x: b.x + 6, y: b.y - 32 }, { x: b.x - 6, y: b.y - 32 }], true);
+      g.lineStyle(3, metal, A);
+      g.lineBetween(b.x + 5, b.y - 30, b.x + 13, b.y - 44); // raised arm
+      g.lineBetween(b.x - 5, b.y - 30, b.x - 8, b.y - 19);
+      g.fillCircle(b.x, b.y - 38, 6.5);
+      if (def.art.style === 'djstatue') {
+        g.lineStyle(2.5, 0x1b1d22, A);
+        g.strokeEllipse(b.x, b.y - 40, 15, 12);
+        g.fillStyle(def.art.glow ?? 0x7df9ff, (0.6 + 0.4 * pulse) * A);
+        g.fillCircle(b.x - 7, b.y - 38, 3);
+        g.fillCircle(b.x + 7, b.y - 38, 3);
+      } else {
+        g.fillStyle(def.art.glow ?? 0xe0202e, A);
+        g.fillEllipse(b.x, b.y - 46, 8, 7);
+      }
+      g.fillStyle(0xffffff, 0.5 * A);
+      g.fillRect(b.x - 4, b.y - 30, 1.5, 12);
       break;
     }
     case 'diamondtile': {

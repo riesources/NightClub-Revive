@@ -1,5 +1,42 @@
 # Build Log
 
+## 2026-10-17 — Furniture from the screenshots and video, and guests who really sit
+
+**16 new items (original drawings, modelled on S7, S8, S9, S10; prices and levels PROPOSED)**
+
+| Item | Seen in | Level | Price | Luxury |
+|---|---|---|---|---|
+| Lime Light Tile | S7 (strip by the bar) | 1 | $100 | 5 |
+| Cocktail Table | S10 (small white tables) | 1 | $300 | 8 |
+| White Bar Stool | S7, S9 | 2 | $250 | 8 |
+| Purple Tube Lamp | S9 | 2 | $700 | 18 |
+| Purple Club Chair | S8 | 2 | $1,800 | 30 |
+| Checkerboard Tile | S9 floor row | 3 | $300 | 9 |
+| Glass Partition | S9 glass walls | 3 | $1,500 | 35 |
+| Lime Neon Bar | S8 (green bar) | 3 | $4,500 | 80 |
+| Round Red Sofa (2×2, seats 4) | S8 | 3 | $5,000 | 80 |
+| Lime Sub Speaker | S9 | 4 | $2,500 | 45 |
+| Light Rig (swinging beams) | S9 overhead lights | 4 | $3,500 | 60 |
+| Long Bottle Bar (3×1) | S7, S10 | 4 | $7,000 | 110 |
+| Red / Black & White Diamond Tiles | S9 build band | 5 | $1,200 | 20 |
+| White Curved Lounge (2×2, seats 4) | S9 | 5 | $8,000 | 120 |
+| Superstar DJ Statue | S9 "NEW" statues | 9 | $40,000 | 450 |
+| Feather Showgirl Statue | S9 "NEW" statues | 10 | $50,000 | 520 |
+
+**Guests really sit (user request)**
+- Before, guests who picked a seat only stood next to it "socializing".
+- Every seat now has slots: one for a stool or chair, one per tile of a sofa, and four for a 2×2 booth, round sofa or curved lounge. A guest who reaches a seat with a free slot moves **onto** it and switches to a sitting pose (knees forward, short shins). The guest stays about 15 s longer, then gets up onto the tile they came from. A full seat leaves them standing beside it.
+- Works in all four facings. With the backrest turned towards you, the sitter is drawn behind it, so only their head shows.
+- Moving, rotating, storing or selling a seat under someone stands them up safely; they never end up inside furniture.
+- Guests now choose seats a little more often (PROPOSED). In a seeded 6-minute run with five seats, about 14% of guest time is spent seated.
+
+**Commands run and results**
+- `npx vitest run`: 125/125 passed (6 new seating tests: slot counts, slots on the seat in all facings, sit → get up, full seat, seat stored under a sitter, 6-minute busy club with nobody inside furniture).
+- `npm run build`: passes.
+- `node scripts/smoke.mjs`: see the PR (new check: a guest sits on a round sofa in the real app).
+- Real-app screenshots reviewed: all new items placed, 12 guests seated on 8 kinds of seat.
+
+
 ## 2026-10-16 — Inventory, 4-way rotation, more music, art pass
 
 **Inventory (S9 showed Store / Inventory / Clear Club)**

@@ -20,6 +20,9 @@ export interface AvatarPose {
   headphones?: boolean;
   /** Dark sunglasses (bouncers). */
   shades?: boolean;
+  /** Seated: hips raised by `seatLift` px (the seat top), knees bent, feet on the floor. */
+  sitting?: boolean;
+  seatLift?: number;
 }
 
 const OUTLINE = 0x15121c;
@@ -45,12 +48,32 @@ export function drawAvatar(p: Painter, a: AvatarAppearance, x: number, y: number
   p.fill(0x000000, 0.35);
   p.ellipse(x, y, 26 * s, 9 * s);
 
-  const by = y - bob;
+  // Seated guests: the body sits on the seat top; legs bend down to the floor.
+  const sitting = !!pose.sitting;
+  const lift = sitting ? (pose.seatLift ?? 10) : 0;
+  // hips sink into the cushion (lower than the seat top) so the pose reads clearly
+  const hipY = y - lift * 0.5;
+  const by = sitting ? hipY + 22 * s : y - bob;
   const legSwing = pose.walking ? Math.sin(t * 2) * 3 * s : pose.dancing ? Math.sin(t * 2) * 2.5 * s : 0;
   const legW = (female ? 4.2 : 4.8) * s;
   const legH = 20 * s;
 
   p.stroke(lw, OUTLINE);
+  if (sitting) {
+    // knees forward over the seat edge, short shins, feet apart in front
+    p.fill(bottom);
+    p.roundRect(x - 9 * s, hipY - 4 * s, 18 * s, 7 * s, 3.5 * s);
+    p.fill(female ? skin : bottom);
+    const shin = 6 * s;
+    p.roundRect(x - 8.5 * s, hipY + 1.5 * s, legW, shin, 2 * s);
+    p.roundRect(x + 4 * s, hipY + 1.5 * s, legW, shin, 2 * s);
+    for (const [sx, dir] of [[x - 7 * s, -1], [x + 6.5 * s, 1]] as const) {
+      p.fill(shoe);
+      p.roundRect(sx - 4 * s + dir * 2 * s, hipY + 5.5 * s, 9 * s, 5 * s, 2.5 * s);
+      p.fill(0xf4f4f4);
+      p.roundRect(sx - 4.4 * s + dir * 2 * s, hipY + 9 * s, 9.8 * s, 2.2 * s, 1.1 * s);
+    }
+  } else {
   // Legs (pants)
   p.fill(female ? skin : bottom);
   p.roundRect(x - 5.5 * s + legSwing * 0.4 - legW / 2 + 2 * s, by - legH - 2 * s, legW, legH, 2 * s);
@@ -71,6 +94,7 @@ export function drawAvatar(p: Painter, a: AvatarAppearance, x: number, y: number
     p.roundRect(sx - 4 * s + dir * 1.2 * s, by - 6 * s, 9 * s, 5.5 * s, 2.5 * s);
     p.fill(0xf4f4f4);
     p.roundRect(sx - 4.4 * s + dir * 1.2 * s, by - 1.8 * s, 9.8 * s, 2.4 * s, 1.2 * s);
+  }
   }
 
   // Torso

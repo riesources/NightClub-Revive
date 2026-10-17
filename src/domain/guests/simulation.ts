@@ -9,7 +9,7 @@ import { finishParty, partyActive } from '../party';
 import { creditIncome } from '../progression';
 import { adjustPopularity, clone, computeLuxury, guestCapacity } from '../club';
 import { isPlaying } from '../dj';
-import { adjacentWalkableCells, blockedCells, cellKey, entranceCell, inBounds, instanceCells } from '../grid';
+import { adjacentWalkableCells, blockedCells, cellKey, entranceCell, inBounds, instanceCells, seatSlots } from '../grid';
 import { findPath } from '../pathfinding/astar';
 import { pickOne, type Rng } from '../rng';
 import { bartenderForBar, bartenderModeEffect, inBouncerArea } from '../staff';
@@ -103,6 +103,7 @@ export class GuestSimulation {
 
   private setState(g: Guest, next: GuestState, now: number): void {
     if (!TRANSITIONS[g.state].includes(next)) this.illegalTransitions++;
+    if (g.sitting && next !== 'SITTING_OR_SOCIALIZING') this.standUp(g);
     g.state = next;
     g.stateSince = now;
     g.lastProgressAt = now;
@@ -122,6 +123,9 @@ export class GuestSimulation {
       escorted: false,
       troubleUnresolved: false,
       caughtBy: null,
+      sitting: false,
+      seatSlot: -1,
+      standAt: null,
       seed,
       appearance: appearanceFromSeed(seed),
       prefGenre: pickOne(this.rng, GENRES)!,
@@ -151,6 +155,8 @@ export class GuestSimulation {
   }
 
   private walkTo(g: Guest, w: WorldCache, state: ClubState, goal: GridPoint): boolean {
+    // any walk starts by getting up off the seat
+    if (g.sitting) this.standUp(g);
     const path = findPath(state.room, w.blocked, guestCell(g), goal);
     if (!path) return false;
     g.path = path;
@@ -170,6 +176,7 @@ export class GuestSimulation {
     this.lastUpdate = now;
     const dt = dtMs / 1000;
     let state = host.getState();
+    this.checkSeated(state);
 
     if (this.spawnEnabled && now >= this.nextSpawnAt && this.guests.length < guestCapacity(state)) {
       const g = this.spawn(state, now);
@@ -397,6 +404,8 @@ export class GuestSimulation {
         if (arrived) {
           this.setState(g, 'SITTING_OR_SOCIALIZING', now);
           g.activityEndsAt = now + 10_000 + this.rng() * 15_000;
+          this.trySit(g, state);
+          if (g.sitting) g.activityEndsAt += 15_000; // a comfy seat keeps them a little longer
         }
         break;
       case 'THIRSTY':
@@ -453,8 +462,9 @@ export class GuestSimulation {
         return;
       }
     }
+    // PROPOSED: about a third of guests who don't dance head for a seat
     const seat = pickOne(this.rng, w.seats.filter((s) => s.cells.length));
-    if (seat && r < danceWeight + 0.25) {
+    if (seat && r < danceWeight + 0.35) {
       const target = pickOne(this.rng, seat.cells)!;
       if (this.walkTo(g, w, state, target)) {
         g.seatId = seat.id;
@@ -543,6 +553,62 @@ export class GuestSimulation {
   }
 
   /** Troublemakers roam the club looking for someone to bother. */
+  /**
+   * Sit down on the chosen seat if a slot is free: the guest moves onto the
+   * seat itself and remembers the tile they came from. A full seat means they
+   * just hang out standing next to it.
+   */
+  private trySit(g: Guest, state: ClubState): void {
+    if (!g.seatId) return;
+    const seat = state.furniture.find((f) => f.id === g.seatId);
+    if (!seat) return;
+    const slots = seatSlots(seat);
+    const taken = new Set(this.guests.filter((o) => o !== g && o.sitting && o.seatId === g.seatId).map((o) => o.seatSlot));
+    let best = -1;
+    let bestD = Infinity;
+    slots.forEach((sl, i) => {
+      if (taken.has(i)) return;
+      const d = Math.hypot(sl.x - g.x, sl.y - g.y);
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    });
+    if (best < 0) return;
+    g.standAt = guestCell(g);
+    g.sitting = true;
+    g.seatSlot = best;
+    g.x = slots[best].x;
+    g.y = slots[best].y;
+    g.path = [];
+  }
+
+  /** Step back off the seat onto the tile beside it (or the door if that is now blocked). */
+  private standUp(g: Guest, state?: ClubState): void {
+    g.sitting = false;
+    g.seatSlot = -1;
+    const back = g.standAt;
+    g.standAt = null;
+    if (back && (!state || !blockedCells(state).has(cellKey(back.col, back.row)))) {
+      g.x = back.col + 0.5;
+      g.y = back.row + 0.5;
+    } else if (state) {
+      const e = entranceCell(state.room);
+      g.x = e.col + 0.5;
+      g.y = e.row + 1.5;
+    }
+  }
+
+  /** Seats can be moved, rotated, stored or sold under a sitting guest: get them up. */
+  private checkSeated(state: ClubState): void {
+    for (const g of this.guests) {
+      if (!g.sitting) continue;
+      const seat = g.seatId ? state.furniture.find((f) => f.id === g.seatId) : undefined;
+      const slot = seat ? seatSlots(seat)[g.seatSlot] : undefined;
+      if (!slot || Math.abs(slot.x - g.x) > 1e-6 || Math.abs(slot.y - g.y) > 1e-6) this.standUp(g, state);
+    }
+  }
+
   private wander(g: Guest, w: WorldCache, state: ClubState): boolean {
     for (let tries = 0; tries < 6; tries++) {
       const target = { col: Math.floor(this.rng() * state.room.cols), row: 1 + Math.floor(this.rng() * (state.room.rows - 1)) };

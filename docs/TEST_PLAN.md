@@ -43,6 +43,7 @@ npm run smoke       # needs a prior build; drives the real app in headless Chrom
 | Inventory: store (no refund), bar/tank side effects, Clear Club, free placement + count down, v7→v8 migration, validation; real-app Store + Inventory tab | `inventory.test.ts`, smoke |
 | Rotation: 4-way cycle, footprints, worker back spot, save rules, every item draws in all facings; real-app rotate | `rotation.test.ts`, `catalogue.test.ts`, smoke |
 | Music: 6 mixes × ≥3 well-formed tracks, unique names; real-app playlist + Next | `music.test.ts`, smoke |
+| Seating: slot counts, slots on the seat in all facings, sit/get up, full seat, seat removed under a sitter, busy-club soak; real-app sit | `seating.test.ts`, smoke |
 | Tutorial stays dismissed after reload | smoke |
 | No console errors | smoke |
 
