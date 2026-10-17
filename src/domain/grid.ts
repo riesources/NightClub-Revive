@@ -3,11 +3,31 @@ import type { ClubState, Facing, FurnitureInstance, GridPoint } from './types';
 
 export const cellKey = (col: number, row: number): string => `${col},${row}`;
 
+/** Quarter turn clockwise: 0 -> 1 -> 2 -> 3 -> 0. */
+export const nextFacing = (f: Facing): Facing => ((f + 1) % 4) as Facing;
+
+/**
+ * Where a worker stands behind an item (DJ booth, bar): the item's back edge,
+ * which faces the wall at facing 0 and turns with it.
+ */
+export function backSpot(col: number, row: number, w: number, h: number, facing: Facing): { x: number; y: number } {
+  switch (facing) {
+    case 1:
+      return { x: col + 0.05, y: row + h / 2 };
+    case 2:
+      return { x: col + w / 2, y: row + h - 0.05 };
+    case 3:
+      return { x: col + w - 0.05, y: row + h / 2 };
+    default:
+      return { x: col + w / 2, y: row + 0.05 };
+  }
+}
+
 /** Footprint dimensions after applying facing. */
 export function footprintSize(catalogId: string, facing: Facing): { w: number; h: number } {
   const def = getFurnitureDef(catalogId);
   if (!def) return { w: 1, h: 1 };
-  return facing === 1 ? { w: def.h, h: def.w } : { w: def.w, h: def.h };
+  return facing % 2 === 1 ? { w: def.h, h: def.w } : { w: def.w, h: def.h };
 }
 
 export function footprintCells(catalogId: string, col: number, row: number, facing: Facing): GridPoint[] {

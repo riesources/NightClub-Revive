@@ -1,5 +1,42 @@
 # Build Log
 
+## 2026-10-16 — Inventory, 4-way rotation, more music, art pass
+
+**Inventory (S9 showed Store / Inventory / Clear Club)**
+- **Store** on any furniture card puts the item in your inventory (no refund, no fee).
+- A new **Inventory** tab (box icon, with a count badge) in Decorate lists stored items with ×counts. Click one to place it again **for free**. Floor tiles stay in place mode while you have more.
+- **Clear Club** stores every placed item at once, after a confirmation.
+- Storing a bar frees its bartender; storing a drink tank trims stock to the new limit (same as selling).
+- Fixed: while decorating, the furniture card used to open *under* the build band, so Move / Sell were unreachable. It now sits above it.
+- Schema v8 adds `inventory`, with a v7→v8 migration.
+
+**Four-way rotation (user request)**
+- Items turn a quarter turn at a time through **4 directions** (R key, or Rotate on the card), not just 2. Every item can be rotated, including 1×1 ones.
+- Back-side details follow the facing: sofa and lounge backrests, bar bottles, speaker cones (only shown when the front faces you), egg-chair opening, aquarium glass. The DJ and bartenders stand on the turned back edge.
+- Fixed: a rotated sofa used to keep its backrest on the wrong edge.
+- Saves accept facings 0–3; old saves (0/1) still load.
+
+**More music (user request)**
+- Every mix now has a **playlist of 3 original tracks**, played back to back like a DJ set (32 bars each, about a minute, with a one-bar breakdown before the change). The now-playing box shows the track name and "Mix · 1/3", with a **Next ›** button.
+- Two new mixes: **House** and **Latin** (PROPOSED additions; the original's four mixes are CONFIRMED). That is 6 mixes and 18 tracks, with new piano, bell and rim/clave sounds and major-key tracks.
+
+**Art pass: compared with the reference screenshots (S7, S8) and video frames (S10)**
+
+| Difference found | Change |
+|---|---|
+| Original eyes are half-closed under heavy lids, with a thick lash line ("cool" look); ours were wide and round | Redrawn: skin-coloured heavy lid over the top of the eye, thick lash line, iris tucked under it, angled brows, winged lashes for female characters |
+| Original guest/DJ cards show a big bust that bleeds out of the card; ours had a tiny full-body figure in a box | Cards now show a large bust portrait overlapping the card edge, with a drop shadow; bigger name and stat text |
+| Go-go tubes in S10 stand about two guests tall with a clearly visible dancer; ours were small | Tube and dancer scaled up ~40%; dancer gets shoes and a ponytail |
+
+Still different: proportions are close but not pixel-measured; the original's skin and cloth shading (soft gradients) is flatter here.
+
+**Commands run and results**
+- `npx vitest run`: 119/119 passed (13 new: inventory store/place/clear/migration/validation, rotation cycle/footprint/back spot/save rules, every item draws in all 4 facings, music playlists).
+- `npm run build`: passes.
+- `node scripts/smoke.mjs`: 27/27 passed (new: Store + Inventory tab, 4-way rotation, track playlist + Next).
+- Real-app screenshots reviewed: items in all four facings, inventory tab, new guest card, Latin track in now playing.
+
+
 ## 2026-10-16 — Interface from the gameplay video, and a furniture pack
 
 Source: frames from the gameplay video S10 (see `EVIDENCE_REGISTER.md`).

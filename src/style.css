@@ -586,6 +586,7 @@ button {
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  overflow: visible;
   border-radius: 12px;
   background: radial-gradient(circle at 50% 75%, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0) 65%);
 }
@@ -2331,4 +2332,97 @@ button {
   .hud-right {
     order: 3;
   }
+}
+
+/* Inventory (S9) */
+.cat.inv {
+  position: relative;
+}
+
+.inv-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  padding: 1px 4px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: #e0202e;
+  color: #fff;
+  font: 900 10px/1.2 Arial, sans-serif;
+}
+
+.item-count {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 0 5px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: var(--gold);
+  color: #15121c;
+  font: 900 12px/1.3 Arial, sans-serif;
+}
+
+.item-price.free {
+  color: #57ff6a;
+}
+
+.inv-empty {
+  align-self: center;
+  max-width: 360px;
+  padding: 0 12px;
+  font-size: 13px;
+  color: #15121c;
+}
+
+.item.clear-club .clear-icon,
+.item.clear-club .clear-icon svg {
+  width: 52px;
+  height: 44px;
+  display: inline-flex;
+}
+
+/* While decorating, furniture cards sit above the build band so Move / Store / Sell stay reachable. */
+.building .card {
+  bottom: 178px;
+  z-index: 5;
+}
+
+/* Big bust portraits on guest and DJ cards, bleeding out of the card like the original (r13, r16). */
+.card-guest .card-portrait,
+.card-dj .card-portrait {
+  width: 112px;
+  margin: -34px 0 -10px -14px;
+  background: none;
+  align-items: flex-end;
+}
+
+.card-guest .card-portrait canvas,
+.card-dj .card-portrait canvas {
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.45));
+}
+
+.card-guest .stats,
+.card-guest .gstats {
+  font-size: 15px;
+}
+
+.card-guest .card-title,
+.card-dj .card-title {
+  font-size: 19px;
+  color: #d8f0ff;
+}
+
+.np-next {
+  padding: 2px 8px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: linear-gradient(180deg, #ffffff, #c8ced8);
+  font: 700 11px/1 Arial, sans-serif;
+  cursor: pointer;
+}
+
+.np-next.hidden {
+  display: none;
 }

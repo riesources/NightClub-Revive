@@ -3,7 +3,7 @@ import type { Facing } from '../domain/types';
 /** What a click on the club currently means. Shared between the scene and the DOM UI. */
 export type Mode =
   | { kind: 'normal' }
-  | { kind: 'place'; catalogId: string; facing: Facing }
+  | { kind: 'place'; catalogId: string; facing: Facing; fromInventory?: boolean }
   | { kind: 'move'; furnitureId: string; facing: Facing }
   | { kind: 'dedicate' }
   | { kind: 'post'; staffId: string };

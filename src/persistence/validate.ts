@@ -36,6 +36,9 @@ export function validateState(d: Record<string, unknown>): { ok: true; state: Cl
   for (const [k, v] of Object.entries(hist)) if (!getParty(k) || !isInt(v, 1)) return bad('Invalid party history entry');
   if (typeof d.clubName !== 'string' || cleanClubName(d.clubName) !== d.clubName) return bad('Invalid club name');
   if (!Array.isArray(d.celebWishes) || d.celebWishes.some((id) => typeof id !== 'string' || !getCelebrity(id)) || new Set(d.celebWishes).size !== d.celebWishes.length) return bad('Invalid celebrity wishes');
+  const inv = d.inventory as Record<string, unknown>;
+  if (!inv || typeof inv !== 'object' || Array.isArray(inv)) return bad('Invalid inventory');
+  for (const [k, v] of Object.entries(inv)) if (!getFurnitureDef(k) || !isInt(v, 1)) return bad('Invalid inventory entry');
   if (!isNum(d.savedAt)) return bad('Invalid savedAt');
   const dj = d.dj as ClubState['dj'];
   if (!dj || !GENRES.includes(dj.genre) || !isTsOrNull(dj.setStartedAt) || !isTsOrNull(dj.setEndsAt) || !isTsOrNull(dj.lastDropBassAt) || !isTsOrNull(dj.lastDedicateAt))
@@ -46,7 +49,7 @@ export function validateState(d: Record<string, unknown>): { ok: true; state: Cl
   for (const f of d.furniture as ClubState['furniture']) {
     if (!f || typeof f.id !== 'string' || ids.has(f.id)) return bad('Duplicate or missing furniture id');
     if (!getFurnitureDef(f.catalogId)) return bad(`Unknown furniture ${String(f.catalogId)}`);
-    if (!isInt(f.col) || !isInt(f.row) || (f.facing !== 0 && f.facing !== 1)) return bad('Invalid furniture position');
+    if (!isInt(f.col) || !isInt(f.row) || ![0, 1, 2, 3].includes(f.facing)) return bad('Invalid furniture position');
     const check = checkPlacement(partial, f.catalogId, f.col, f.row, f.facing);
     if (!check.valid) return bad(`Furniture ${f.id}: ${check.reason}`);
     ids.add(f.id);

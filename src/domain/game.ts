@@ -4,7 +4,7 @@ import { refillDrinks } from './bar';
 import { CLUB_NAME_MAX, clone, cleanClubName } from './club';
 import { getCelebrity } from '../data/celebrities';
 import * as dj from './dj';
-import { buyAndPlace, moveFurniture, sellFurniture } from './economy';
+import { buyAndPlace, moveFurniture, placeFromInventory, sellFurniture, storeAll, storeFurniture } from './economy';
 import { GuestSimulation, type SimEvent, type SimHost } from './guests/simulation';
 import { createRng, type Rng } from './rng';
 import { bookCelebrity } from './celebrity';
@@ -141,6 +141,15 @@ export class Game implements SimHost {
     const draft = clone(this._state);
     draft.appearance = { ...a };
     return this.apply({ ok: true, state: draft }, 'Look saved');
+  }
+  store(furnitureId: string) {
+    return this.apply(storeFurniture(this._state, furnitureId), 'Moved to your inventory');
+  }
+  clearClub() {
+    return this.apply(storeAll(this._state), 'Everything is in your inventory');
+  }
+  placeStored(catalogId: string, col: number, row: number, facing: Facing = 0) {
+    return this.apply(placeFromInventory(this._state, catalogId, col, row, facing));
   }
   renameClub(name: string) {
     const n = cleanClubName(name);

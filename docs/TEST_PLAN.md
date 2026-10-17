@@ -40,6 +40,9 @@ npm run smoke       # needs a prior build; drives the real app in headless Chrom
 | Progress screen: ladder covers every level, every item/celebrity/party listed once, worker-slot levels reachable, $500 at level 1, room growth, next milestone; real-app open from the badge | `unlocks.test.ts`, smoke |
 | Interface (S10): club name rules + rename, wishes, mood words, v6→v7 migration, party CTA, guest card parts, "Ends:" time | `interface.test.ts`, smoke |
 | Furniture catalogue: unique ids, walkable rules, every item draws, video pack places and blocks | `catalogue.test.ts` |
+| Inventory: store (no refund), bar/tank side effects, Clear Club, free placement + count down, v7→v8 migration, validation; real-app Store + Inventory tab | `inventory.test.ts`, smoke |
+| Rotation: 4-way cycle, footprints, worker back spot, save rules, every item draws in all facings; real-app rotate | `rotation.test.ts`, `catalogue.test.ts`, smoke |
+| Music: 6 mixes × ≥3 well-formed tracks, unique names; real-app playlist + Next | `music.test.ts`, smoke |
 | Tutorial stays dismissed after reload | smoke |
 | No console errors | smoke |
 

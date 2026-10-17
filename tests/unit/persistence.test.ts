@@ -1,3 +1,4 @@
+import { SCHEMA_VERSION } from '../../src/domain/types';
 import { describe, expect, it } from 'vitest';
 import { createNewClub } from '../../src/domain/club';
 import { buyAndPlace } from '../../src/domain/economy';
@@ -92,7 +93,7 @@ describe('v1 -> v2 migration', () => {
     const r = new LocalSaveRepository(store).load();
     expect(r.status).toBe('ok');
     if (r.status !== 'ok') return;
-    expect(r.state.schemaVersion).toBe(7);
+    expect(r.state.schemaVersion).toBe(SCHEMA_VERSION);
     expect(r.state.appearance).toEqual({ gender: 'm', shoes: '#ffffff', skin: '#f2c9a0', hairStyle: 'spiky', hairColor: '#a0522d', top: '#00c8ff', bottom: '#1f2a44' });
     expect(r.state.furniture.map((f) => f.catalogId)).toEqual(['stool_red', 'dj_starter']);
     expect(r.state.cash).toBe(1000 + 600);

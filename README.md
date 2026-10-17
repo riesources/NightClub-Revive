@@ -11,8 +11,8 @@ The layout, characters, furniture and interface are modelled closely on historic
 | ![DJ card](docs/screenshots/dj.png) | ![Guest card](docs/screenshots/guest.png) | ![Build mode](docs/screenshots/build.png) |
 | **Dressing room** | **Workers** | **Parties** |
 | ![Dressing room](docs/screenshots/dress.png) | ![Workers panel](docs/screenshots/workers.png) | ![Party planner](docs/screenshots/party.png) |
-| **Progress** | **Furniture pack** | |
-| ![Progress screen](docs/screenshots/progress.png) | ![Furniture pack](docs/screenshots/furniture.png) | |
+| **Progress** | **Furniture pack** | **Inventory** |
+| ![Progress screen](docs/screenshots/progress.png) | ![Furniture pack](docs/screenshots/furniture.png) | ![Inventory](docs/screenshots/inventory.png) |
 
 ## Play online
 
@@ -59,6 +59,8 @@ The `dist/` folder is plain static files. You can host it on any static web host
 - **THROW A PARTY!** (top right): pay to throw a party. Guests pour in while it runs; hit the guest goal shown on the button to win the reward.
 - **Club name:** click it (top right) to rename your club.
 - **Progress:** click your level badge or XP bar to see what you've unlocked and what's coming next.
+- **Inventory:** click placed furniture and choose **Store** to keep it; place it again for free from the box tab in Decorate. **Clear Club** stores everything.
+- **Rotate:** press `R` while placing, or **Rotate** on a furniture card, to turn items through all four directions.
 - Drag to pan, and scroll to zoom. Click any guest to see their card.
 
 Your club saves automatically in your browser. Use **Settings** (gear icon) to export, import or reset your save.
@@ -78,7 +80,7 @@ The game is written in **TypeScript** and runs in any modern web browser.
 - **Game engine: Phaser 3.** This draws the isometric club, moves the guests around and handles mouse input.
 - **Interface: HTML and CSS.** The panels, cards, buttons and HUD are ordinary web page elements laid over the game. The icons are SVG drawings written directly in the code.
 - **Graphics: drawn in code.** There are no image files. Characters and furniture are made of shapes in TypeScript, using Phaser for the club and the browser's built-in drawing canvas for the menu pictures.
-- **Music: the Web Audio API.** The browser's built-in sound system generates the drums, bass and chords live.
+- **Music: the Web Audio API.** The browser's built-in sound system generates the drums, bass and chords live: 6 mixes (Club, Hip-Hop, Electronic, Pop, House, Latin) with 3 original tracks each.
 - **Tools:**
   - Vite runs the development server and builds the finished game.
   - Vitest runs the unit tests.

@@ -13,6 +13,8 @@ export interface DrawOpts {
   alpha?: number;
   tint?: number;
   pulse?: number;
+  /** 0-3 quarter turns; decides which edge is the item's back. */
+  facing?: number;
 }
 
 type G = IsoGfx;
@@ -42,6 +44,34 @@ export function drawPrism(g: G, col: number, row: number, w: number, h: number, 
     g.strokePoints([up(d, height), d, c, b, up(b, height)], false);
     g.lineBetween(c.x, c.y, c.x, c.y - height);
   }
+}
+
+/**
+ * Item-local frame: u runs along the item's length, v from its back (0) to its
+ * front (depth). Maps local boxes and points onto the rotated grid footprint.
+ */
+function localFrame(col: number, row: number, w: number, h: number, facing: number) {
+  const odd = facing % 2 === 1;
+  const L = odd ? h : w;
+  const D = odd ? w : h;
+  const pt = (u: number, v: number): { c: number; r: number } => {
+    switch (facing) {
+      case 1:
+        return { c: col + v, r: row + u };
+      case 2:
+        return { c: col + L - u, r: row + D - v };
+      case 3:
+        return { c: col + w - v, r: row + h - u };
+      default:
+        return { c: col + u, r: row + v };
+    }
+  };
+  const box = (u0: number, v0: number, du: number, dv: number): [number, number, number, number] => {
+    const a = pt(u0, v0);
+    const b = pt(u0 + du, v0 + dv);
+    return [Math.min(a.c, b.c), Math.min(a.r, b.r), Math.abs(b.c - a.c), Math.abs(b.r - a.r)];
+  };
+  return { L, D, pt, box };
 }
 
 /** Front faces of a box as quads, for painting details onto. */
@@ -93,6 +123,8 @@ export function drawFurniture(g: G, def: FurnitureDef, col: number, row: number,
   const H = def.art.height;
   const centre = gridToScreen(col + w / 2, row + h / 2, cfg);
   const pulse = opts.pulse ?? 0.5;
+  const facing = opts.facing ?? 0;
+  const lf = localFrame(col, row, w, h, facing);
 
   switch (def.art.style) {
     case 'tile': {
@@ -115,9 +147,11 @@ export function drawFurniture(g: G, def: FurnitureDef, col: number, row: number,
       drawPrism(g, col + i, row + i, w - 2 * i, h - 2 * i, 0, H, shade(top, 1.25), top, cfg, A);
       const f = faces(col + i, row + i, w - 2 * i, h - 2 * i, 0, H, cfg);
       const light = top > 0x808080;
-      // woofers on the left-front face, tweeter above
-      for (const [v, r] of [[0.28, 7], [0.62, 5.5]] as const) {
-        const p = f.left(0.5, v);
+      // woofers on the front: the left-front face at facing 0, the right-front
+      // face at facing 1; turned away (2, 3) only the back panel shows
+      const front = facing === 0 ? f.left : facing === 1 ? f.right : null;
+      for (const [v, r] of front ? ([[0.28, 7], [0.62, 5.5]] as const) : []) {
+        const p = front!(0.5, v);
         g.fillStyle(light ? 0xc8ced8 : 0x3a3d45, A);
         g.fillEllipse(p.x, p.y, r * 2.1, r * 2.4);
         g.fillStyle(light ? 0x8890a0 : 0x0c0c10, A);
@@ -125,13 +159,16 @@ export function drawFurniture(g: G, def: FurnitureDef, col: number, row: number,
         g.fillStyle(0x6a6f7c, A);
         g.fillEllipse(p.x, p.y, r * 0.5, r * 0.6);
       }
-      const tw = f.left(0.5, 0.86);
-      g.fillStyle(0x6a6f7c, A);
-      g.fillEllipse(tw.x, tw.y, 5, 5);
-      // grille dots on the right face
+      if (front) {
+        const tw = front(0.5, 0.86);
+        g.fillStyle(0x6a6f7c, A);
+        g.fillEllipse(tw.x, tw.y, 5, 5);
+      }
+      // grille dots on the side face
+      const sideFace = facing === 1 ? f.left : f.right;
       g.fillStyle(light ? 0xa0a8b6 : 0x2a2c33, A);
       for (let v = 0.15; v < 0.95; v += 0.12) for (let u = 0.2; u < 0.9; u += 0.2) {
-        const p = f.right(u, v);
+        const p = sideFace(u, v);
         g.fillRect(p.x - 0.6, p.y - 0.6, 1.2, 1.2);
       }
       break;
@@ -162,7 +199,8 @@ export function drawFurniture(g: G, def: FurnitureDef, col: number, row: number,
       const n = Math.max(w, h) * 5;
       for (let i = 0; i < n; i++) {
         const t = (i + 0.5) / n;
-        const p = gridToScreen(col + (w >= h ? w * t : 0.25), row + (w >= h ? 0.25 : h * t), cfg);
+        const q = lf.pt(lf.L * t, 0.25);
+        const p = gridToScreen(q.c, q.r, cfg);
         g.fillStyle(OUT, A);
         g.fillRect(p.x - 2.6, p.y - H - 15, 5.2, 13);
         g.fillStyle(colors[i % colors.length], A);
@@ -198,17 +236,24 @@ export function drawFurniture(g: G, def: FurnitureDef, col: number, row: number,
     case 'sectional':
     case 'booth': {
       const seatH = H * 0.55;
+      const { L, D, box, pt } = lf;
+      const back = box(0.05, 0.05, L - 0.1, 0.28);
+      const armA = box(0.05, 0.33, 0.24, D - 0.38);
+      const armB = box(L - 0.29, 0.33, 0.24, D - 0.38);
+      const towardViewer = facing === 2 || facing === 3;
+      // a backrest facing the viewer is drawn after the seat; one at the back, before it
+      if (!towardViewer) drawPrism(g, back[0], back[1], back[2], back[3], seatH * 0.6, H * 0.85 + seatH * 0.4, shade(top, 1.12), side, cfg, A);
       drawPrism(g, col + 0.05, row + 0.05, w - 0.1, h - 0.1, 0, seatH, top, side, cfg, A);
-      // backrest along the back (row) edge and arm along the left (col) edge
-      drawPrism(g, col + 0.05, row + 0.05, w - 0.1, 0.28, seatH, H * 0.85, shade(top, 1.12), side, cfg, A);
-      drawPrism(g, col + 0.05, row + 0.33, 0.24, h - 0.38, seatH, H * 0.35, shade(top, 1.05), side, cfg, A);
-      if (def.art.style === 'booth') drawPrism(g, col + w - 0.29, row + 0.33, 0.24, h - 0.38, seatH, H * 0.35, shade(top, 1.05), side, cfg, A);
+      if (towardViewer) drawPrism(g, back[0], back[1], back[2], back[3], 0, H * 0.85 + seatH, shade(top, 1.12), side, cfg, A);
+      drawPrism(g, armA[0], armA[1], armA[2], armA[3], seatH, H * 0.35, shade(top, 1.05), side, cfg, A);
+      if (def.art.style === 'booth') drawPrism(g, armB[0], armB[1], armB[2], armB[3], seatH, H * 0.35, shade(top, 1.05), side, cfg, A);
       // cushion seams
-      const [a, b] = corners(col, row, w, h, cfg);
       g.lineStyle(1, shade(top, 0.6), 0.6 * A);
-      for (let k = 1; k < w; k++) {
-        const p = lerp(a, b, k / w);
-        const q = gridToScreen(col + k, row + h, cfg);
+      for (let k = 1; k < L; k++) {
+        const a0 = pt(k, 0.33);
+        const a1 = pt(k, D);
+        const p = gridToScreen(a0.c, a0.r, cfg);
+        const q = gridToScreen(a1.c, a1.r, cfg);
         g.lineBetween(p.x, p.y - seatH, q.x, q.y - seatH);
       }
       break;
@@ -216,15 +261,18 @@ export function drawFurniture(g: G, def: FurnitureDef, col: number, row: number,
     case 'lounge': {
       // low chrome-framed lounge chair with sloped back
       g.lineStyle(2, 0xc8ced8, A);
-      const l = gridToScreen(col + 0.2, row + 0.8, cfg);
-      const r = gridToScreen(col + 0.8, row + 0.8, cfg);
+      const legL = lf.pt(0.2, 0.8);
+      const legR = lf.pt(0.8, 0.8);
+      const l = gridToScreen(legL.c, legL.r, cfg);
+      const r = gridToScreen(legR.c, legR.r, cfg);
       g.lineBetween(l.x, l.y, l.x + 2, l.y - 9);
       g.lineBetween(r.x, r.y, r.x - 2, r.y - 9);
-      drawPrism(g, col + 0.12, row + 0.3, 0.76, 0.6, 7, 4, top, side, cfg, A);
-      drawPrism(g, col + 0.12, row + 0.1, 0.76, 0.22, 9, 16, shade(top, 1.3), side, cfg, A);
-      g.lineStyle(1, 0x55585f, 0.8 * A);
-      const s0 = gridToScreen(col + 0.5, row + 0.35, cfg);
-      g.lineBetween(s0.x - 8, s0.y - 18, s0.x + 8, s0.y - 18);
+      const seat = lf.box(0.12, 0.3, 0.76, 0.6);
+      const back = lf.box(0.12, 0.1, 0.76, 0.22);
+      const towardViewer = facing === 2 || facing === 3;
+      if (!towardViewer) drawPrism(g, back[0], back[1], back[2], back[3], 9, 16, shade(top, 1.3), side, cfg, A);
+      drawPrism(g, seat[0], seat[1], seat[2], seat[3], 7, 4, top, side, cfg, A);
+      if (towardViewer) drawPrism(g, back[0], back[1], back[2], back[3], 9, 16, shade(top, 1.3), side, cfg, A);
       break;
     }
     case 'eggchair': {
@@ -239,8 +287,11 @@ export function drawFurniture(g: G, def: FurnitureDef, col: number, row: number,
       g.strokeEllipse(centre.x, centre.y - 26, 30, 36);
       g.lineStyle(1, side, 0.7 * A);
       for (let k = -12; k <= 12; k += 4) g.lineBetween(centre.x + k, centre.y - 42, centre.x + k * 0.7, centre.y - 10);
-      g.fillStyle(0xff6b3d, A);
-      g.fillEllipse(centre.x + 2, centre.y - 22, 20, 22);
+      if (facing === 0 || facing === 1) {
+        // the opening (orange cushion) faces the viewer's left or right
+        g.fillStyle(0xff6b3d, A);
+        g.fillEllipse(centre.x + (facing === 0 ? -3 : 5), centre.y - 22, 20, 22);
+      }
       g.fillStyle(0xffffff, 0.25 * A);
       g.fillEllipse(centre.x - 4, centre.y - 34, 8, 5);
       break;
@@ -348,30 +399,37 @@ export function drawFurniture(g: G, def: FurnitureDef, col: number, row: number,
     }
     case 'gogo': {
       // glass tube on a lit base with a dancer inside (S10)
-      const r = 13;
-      const base = 8;
-      const tubeH = H - base - 6;
+      // sized up after comparing with S10, where the tubes stand about two guests tall
+      const k = H / 60;
+      const r = 13 * k;
+      const base = 8 * k;
+      const tubeH = H - base - 6 * k;
       g.fillStyle(0x000000, 0.3 * A);
-      g.fillEllipse(centre.x, centre.y, 36, 16);
+      g.fillEllipse(centre.x, centre.y, 36 * k, 16 * k);
       g.fillStyle(side, A);
       g.fillRect(centre.x - r - 3, centre.y - base, (r + 3) * 2, base);
-      g.fillEllipse(centre.x, centre.y, (r + 3) * 2, 12);
+      g.fillEllipse(centre.x, centre.y, (r + 3) * 2, 12 * k);
       g.fillStyle(def.art.glow ?? 0x00e5ff, (0.5 + 0.5 * pulse) * A);
-      g.fillEllipse(centre.x, centre.y - base, (r + 3) * 2, 12);
+      g.fillEllipse(centre.x, centre.y - base, (r + 3) * 2, 12 * k);
       const fb = { x: centre.x, y: centre.y - base };
-      const sw = (pulse - 0.5) * 4;
-      g.fillStyle(0x8a5a3c, A);
-      g.lineStyle(2.5, 0x8a5a3c, A);
-      g.lineBetween(fb.x - 2, fb.y - 2, fb.x - 3 - sw, fb.y - 14);
-      g.lineBetween(fb.x + 2, fb.y - 2, fb.x + 3 - sw, fb.y - 14);
+      const sw = (pulse - 0.5) * 4 * k;
+      const d = (v: number) => v * k;
+      g.lineStyle(d(2.6), 0x8a5a3c, A);
+      g.lineBetween(fb.x - d(2), fb.y - d(2), fb.x - d(3) - sw, fb.y - d(14));
+      g.lineBetween(fb.x + d(2), fb.y - d(2), fb.x + d(3) - sw, fb.y - d(14));
+      g.fillStyle(0xffffff, A);
+      g.fillRect(fb.x - d(4) - sw, fb.y - d(3), d(4), d(2.5));
+      g.fillRect(fb.x - sw, fb.y - d(3), d(4), d(2.5));
       g.fillStyle(0xff3df2, A);
-      g.fillRect(fb.x - 5 + sw * 0.5, fb.y - 26, 10, 13);
-      g.lineStyle(2, 0x8a5a3c, A);
-      g.lineBetween(fb.x - 4 + sw * 0.5, fb.y - 24, fb.x - 9 + sw, fb.y - 34);
-      g.lineBetween(fb.x + 4 + sw * 0.5, fb.y - 24, fb.x + 9 + sw, fb.y - 33);
-      g.fillCircle(fb.x + sw * 0.5, fb.y - 31, 4.5);
+      g.fillRect(fb.x - d(5) + sw * 0.5, fb.y - d(26), d(10), d(13));
+      g.lineStyle(d(2.2), 0x8a5a3c, A);
+      g.lineBetween(fb.x - d(4) + sw * 0.5, fb.y - d(24), fb.x - d(9) + sw, fb.y - d(34));
+      g.lineBetween(fb.x + d(4) + sw * 0.5, fb.y - d(24), fb.x + d(9) + sw, fb.y - d(33));
+      g.fillStyle(0x8a5a3c, A);
+      g.fillCircle(fb.x + sw * 0.5, fb.y - d(31), d(5));
       g.fillStyle(0x1b1b1b, A);
-      g.fillEllipse(fb.x + sw * 0.5, fb.y - 34, 10, 6);
+      g.fillEllipse(fb.x + sw * 0.5, fb.y - d(34.5), d(11), d(6));
+      g.fillRect(fb.x + sw * 0.5 - d(5.5), fb.y - d(34.5), d(3), d(9));
       g.fillStyle(top, 0.22 * A);
       g.fillRect(centre.x - r, centre.y - base - tubeH, r * 2, tubeH);
       g.fillStyle(0xffffff, 0.45 * A);
@@ -388,9 +446,14 @@ export function drawFurniture(g: G, def: FurnitureDef, col: number, row: number,
     }
     case 'aquarium': {
       // tall glass tank with swimming fish (S10 aquarium wall)
-      drawPrism(g, col + 0.1, row + 0.3, w - 0.2, h - 0.6, 0, 8, side, shade(side, 0.8), cfg, A);
-      const f = faces(col + 0.1, row + 0.3, w - 0.2, h - 0.6, 8, H - 12, cfg);
-      const face = (u0: number, u1: number, v0: number, v1: number, which: 'left' | 'right') => [f[which](u0, v0), f[which](u1, v0), f[which](u1, v1), f[which](u0, v1)];
+      const [bc, br, bw, bh] = lf.box(0.1, 0.3, lf.L - 0.2, lf.D - 0.6);
+      drawPrism(g, bc, br, bw, bh, 0, 8, side, shade(side, 0.8), cfg, A);
+      const f = faces(bc, br, bw, bh, 8, H - 12, cfg);
+      // the long glass side is the left face at even facings, the right face at odd ones
+      const long: 'left' | 'right' = facing % 2 === 0 ? 'left' : 'right';
+      const short: 'left' | 'right' = long === 'left' ? 'right' : 'left';
+      const faceOf = (u0: number, u1: number, v0: number, v1: number, which: 'left' | 'right') => [f[which](u0, v0), f[which](u1, v0), f[which](u1, v1), f[which](u0, v1)];
+      const face = (u0: number, u1: number, v0: number, v1: number, which: 'left' | 'right') => faceOf(u0, u1, v0, v1, which === 'left' ? long : short);
       g.fillStyle(top, 0.85 * A);
       g.fillPoints(face(0, 1, 0, 1, 'left'), true);
       g.fillStyle(shade(top, 0.8), 0.85 * A);
@@ -399,14 +462,14 @@ export function drawFurniture(g: G, def: FurnitureDef, col: number, row: number,
       const fish: [number, number, number][] = [[0.15, 0.7, 0xff8a00], [0.55, 0.45, 0xffd23f], [0.3, 0.25, 0xff3df2], [0.75, 0.62, 0x7df9ff]];
       fish.forEach(([u, v, c], i) => {
         const uu = (u + ((t * (0.05 + i * 0.015)) % 1)) % 1;
-        const p = f.left(0.08 + uu * 0.84, v);
+        const p = f[long](0.08 + uu * 0.84, v);
         g.fillStyle(c, A);
         g.fillEllipse(p.x, p.y, 7, 4);
         g.fillTriangle(p.x - 3.5, p.y, p.x - 7, p.y - 2.5, p.x - 7, p.y + 2.5);
       });
       g.fillStyle(0x2fa84f, 0.9 * A);
       for (const u of [0.1, 0.42, 0.85]) {
-        const p = f.left(u, 0);
+        const p = f[long](u, 0);
         g.fillTriangle(p.x - 3, p.y, p.x + 3, p.y, p.x, p.y - 14);
       }
       g.fillStyle(0xffffff, 0.3 * A);
