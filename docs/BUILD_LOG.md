@@ -33,7 +33,7 @@
 **Commands run and results**
 - `npx vitest run`: 125/125 passed (6 new seating tests: slot counts, slots on the seat in all facings, sit → get up, full seat, seat stored under a sitter, 6-minute busy club with nobody inside furniture).
 - `npm run build`: passes.
-- `node scripts/smoke.mjs`: see the PR (new check: a guest sits on a round sofa in the real app).
+- `node scripts/smoke.mjs`: 28/28 passed (new check: a guest sits on a round sofa in the real app).
 - Real-app screenshots reviewed: all new items placed, 12 guests seated on 8 kinds of seat.
 
 
