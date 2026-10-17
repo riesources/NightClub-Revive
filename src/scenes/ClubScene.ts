@@ -16,6 +16,20 @@ import type { Interaction } from '../ui/interaction';
 import { staffAppearance } from '../ui/staffLook';
 
 const WALL_H = 96;
+/** Pixel height of a seat's top, where a sitting guest's hips go. */
+function seatLiftFor(def: { art: { style: string; height: number } }): number {
+  switch (def.art.style) {
+    case 'stool':
+      return def.art.height + 2;
+    case 'lounge':
+      return 12;
+    case 'eggchair':
+      return 14;
+    default:
+      return Math.round(def.art.height * 0.55) + 3;
+  }
+}
+
 const DEPTH_FLOOR = -1_000_000;
 const DEPTH_FLAT = -500_000;
 const DEPTH_UI = 1_000_000;
@@ -391,7 +405,15 @@ export class ClubScene extends Phaser.Scene {
         this.guestGfx.set(guest.id, g);
       }
       g.clear();
-      g.setDepth((guest.x + guest.y) * 100 + 50);
+      // Seated guests draw just in front of their seat, or just behind it when
+      // the backrest faces the viewer (facing 2/3) so the back hides them.
+      const seat = guest.sitting && guest.seatId ? this.game_.state.furniture.find((f) => f.id === guest.seatId) : undefined;
+      const seatDef = seat ? getFurnitureDef(seat.catalogId) : undefined;
+      if (seat && seatDef) {
+        const fp = footprintSize(seat.catalogId, seat.facing);
+        const base = (depthFor(seat.col, seat.row, fp.w, fp.h) - 1) * 100;
+        g.setDepth(seat.facing >= 2 ? base - 2 : base + 2);
+      } else g.setDepth((guest.x + guest.y) * 100 + 50);
       const p = gridToScreen(guest.x, guest.y, this.cfg);
       const phase = ((now + guest.seed % 1000) / 900) % 1;
       const dancing = guest.state === 'DANCING' && playing;
@@ -420,6 +442,8 @@ export class ClubScene extends Phaser.Scene {
         dancing,
         walking,
         arms: guest.state === 'DRINKING' ? 'drink' : dancing && guest.seed % 3 === 0 ? 'up' : 'down',
+        sitting: guest.sitting,
+        seatLift: seatDef ? seatLiftFor(seatDef) : 0,
       });
       this.drawBubble(g, guest, p.x + 13, p.y - 74, playing);
     }

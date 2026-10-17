@@ -11,6 +11,8 @@ The layout, characters, furniture and interface are modelled closely on historic
 | ![DJ card](docs/screenshots/dj.png) | ![Guest card](docs/screenshots/guest.png) | ![Build mode](docs/screenshots/build.png) |
 | **Dressing room** | **Workers** | **Parties** |
 | ![Dressing room](docs/screenshots/dress.png) | ![Workers panel](docs/screenshots/workers.png) | ![Party planner](docs/screenshots/party.png) |
+| **Seating** | **More furniture** | |
+| ![Guests sitting](docs/screenshots/seating.png) | ![More furniture](docs/screenshots/furniture2.png) | |
 | **Progress** | **Furniture pack** | **Inventory** |
 | ![Progress screen](docs/screenshots/progress.png) | ![Furniture pack](docs/screenshots/furniture.png) | ![Inventory](docs/screenshots/inventory.png) |
 
@@ -90,7 +92,7 @@ The game is written in **TypeScript** and runs in any modern web browser.
 ## What works
 
 - The original-style HUD: portrait, level and XP, DJ quick buttons with timer, gold cash, POPULARITY/LUXURY badges, drink tube, now playing, and the character dock.
-- Chibi guests who pay a $5 cover, dance, queue at bars, buy drinks and tip, with a guest card showing Spent / Tip Rate / Happiness.
+- Chibi guests who pay a $5 cover, dance, sit on sofas, stools and booths, queue at bars, buy drinks and tip, with a guest card showing Spent / Tip Rate / Happiness.
 - DJ card with **Refresh Set / Drop Bass / Dedicate Song**. Club Mix, Hip-Hop, Electronic and Pop mixes, each with its own procedural music.
 - Build band with furniture thumbnails, prices and luxury tooltips. Buy, move, rotate and sell.
 - Workers panel with slots that unlock at levels 9/13/17/21. Switch workers between Bar Tender and **Bouncer**, set a bouncer's post, and watch him walk over and throw out **troublemakers** in his area, or use **Send Bouncer** for anyone outside it. Level-up screen. Dressing room with gender, dice, skin and head colours.
